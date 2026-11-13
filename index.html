@@ -28,11 +28,13 @@ button{font:inherit;color:inherit}
 .topp{background:var(--red);color:var(--on-red)}
 .topp .wrap{display:flex;align-items:center;gap:12px;padding-top:10px;padding-bottom:10px}
 .topp h1{font-size:26px;font-style:italic;white-space:nowrap}
+.merke{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.merke img{height:24px;width:auto;display:block}
 .faner{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
 .faner button{background:transparent;border:2px solid var(--on-red);color:var(--on-red);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
 .faner button[aria-selected=true]{background:var(--on-red);color:var(--red)}
 .vis{padding:12px 0 calc(90px + env(safe-area-inset-bottom))}
-@media (max-width:520px){.topp h1{font-size:19px}.topp .wrap{gap:8px}.faner{gap:3px}.faner button{padding:4px 8px;font-size:12px}}
+@media (max-width:520px){.topp h1{font-size:19px}.merke img{height:20px}.topp .wrap{gap:8px}.faner{gap:3px}.faner button{padding:4px 8px;font-size:12px}}
 h2{font-size:28px;color:var(--accent-text);margin:6px 0 8px}
 .ingress{margin:0 0 14px;max-width:66ch}
 
@@ -137,7 +139,7 @@ table.stat td.n{text-align:center;width:60px}
 <body>
 <header class="topp">
   <div class="wrap">
-    <h1>Live scouting</h1>
+    <div class="merke"><img src="logo.png" alt="SK Brann" width="258" height="72"><h1>Live scouting</h1></div>
     <nav class="faner" role="tablist" aria-label="Del av skjemaet">
       <button role="tab" data-fane="kamp">Kamp</button>
       <button role="tab" data-fane="live">Live</button>
