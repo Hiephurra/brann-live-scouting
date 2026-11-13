@@ -98,6 +98,26 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .feed .siste small{font-weight:400}
 .feed button{border:2px solid var(--line);background:var(--field);border-radius:6px;padding:8px 10px;font-weight:700;cursor:pointer;white-space:nowrap}
 .feed button[aria-pressed=true]{background:var(--red);border-color:var(--red);color:var(--on-red)}
+.feed .siste{cursor:pointer}
+.hurtig{max-width:900px;margin:0 auto;padding:6px 14px 0}
+.hrad{display:flex;gap:6px;align-items:flex-end}
+.hg{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hg-int{flex:1}
+.hl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.feed .hb{height:44px;min-width:42px;padding:0 8px;overflow:hidden;text-overflow:ellipsis;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:4px}
+.feed .hg-int .hb{width:100%;display:block;text-align:left;font-size:13px}
+.feed .hb:disabled{border-style:dashed;cursor:default}
+.seg{display:flex}
+.feed .seg button{height:44px;width:34px;padding:0;border-radius:0;border-left-width:0;touch-action:manipulation}
+.feed .seg button:first-child{border-left-width:2px;border-radius:6px 0 0 6px}
+.feed .seg button:last-child{border-radius:0 6px 6px 0}
+.hvalg{display:grid;gap:6px;margin-bottom:6px}
+.feed .hvalg button{height:44px;text-align:left}
+.feed button.opptar{background:var(--red);border-color:var(--red);color:var(--on-red)}
+body.panel .vis{padding-bottom:calc(160px + env(safe-area-inset-bottom))}
+.toast{position:fixed;top:8px;left:14px;right:14px;z-index:30;background:var(--red);color:var(--on-red);font-weight:700;padding:10px 12px;border-radius:6px;text-align:center;border:2px solid var(--on-red)}
+.lydrad{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 0}
+.lydrad audio{width:100%}
 .varsel{font-weight:700;color:var(--accent-text);margin:2px 0 6px;font-size:13px;line-height:1.3}
 
 /* UTFYLLING */
@@ -162,7 +182,7 @@ table.stat td.n{text-align:center;width:60px}
   <!-- KAMP -->
   <section class="vis" data-vis="kamp">
     <h2>Kamp og spiller</h2>
-    <p class="ingress">Fyll ut før kampen. Under kampen logger du i Live med ett trykk per fotballaksjon. I pausen og etter kampen fyller du ut komponentene i Utfylling.</p>
+    <p class="ingress">Fyll ut før kampen. Under kampen logger du i Live med ett trykk per fotballaksjon. «Koble til forrige» knytter den siste aksjonen du logget til aksjonen rett før. I pausen og etter kampen fyller du ut komponentene i Utfylling.</p>
     <div class="grid">
       <label class="f">Spiller<input type="text" data-meta="spiller"></label>
       <label class="f">Klubb<input type="text" data-meta="klubb"></label>
@@ -239,13 +259,14 @@ table.stat td.n{text-align:center;width:60px}
   </section>
 </main>
 
-<div class="feed" id="feed"><div class="wrap">
+<div class="feed" id="feed"><div class="hurtig skjult" id="hurtig"></div><div class="wrap">
   <span class="siste" id="siste">Ingen aksjoner logget</span>
-  <button id="koble" aria-pressed="false" title="Koble siste aksjon til aksjonen før">Koble</button>
+  <button id="koble" aria-pressed="false" title="Knytter den siste aksjonen du logget til aksjonen rett før">Koble til forrige</button>
   <button id="angre">Angre</button>
 </div></div>
 <div class="defark skjult" id="defark" role="dialog" aria-modal="false" aria-labelledby="deftittel"><div class="wrap"><h3 id="deftittel"></h3><div id="deftekst"></div><button class="knapp" id="deflukk">Lukk</button></div></div>
 <datalist id="formasjoner"></datalist>
+<div class="toast skjult" id="toast" role="status" aria-live="polite"></div>
 <pre id="utskrift"></pre>
 
 <script>
@@ -315,16 +336,16 @@ const KROPPSDEL=['Fot','Hode','Kropp','Annet'];
 const JDN=['Ja','Delvis','Nei'];
 const NIVA=['Ikke god nok','Bredde','Starter','Eliteserie-profil','Internasjonal profil'];
 const SIKKERHET={
-  '1':['Gjetning','Så bare deler av situasjonen, eller hadde dårlig sikt. Både intensjonen og varianten er antakelser.'],
-  '2':['Usikker','Så aksjonen, men ikke alternativene han hadde. Intensjonen er en tolkning, og varianten er usikker.'],
-  '3':['Rimelig sikker','Så aksjonen og de viktigste alternativene. Intensjonen er tydelig, men flere varianter kan forklare valget.'],
-  '4':['Sikker','Så hele situasjonen og alternativene. Både intensjonen og valget av variant er tydelige.'],
-  '5':['Svært sikker','Som 4, og han viser samme intensjon og variant i lignende situasjoner i kampen.']
+  '1':['Gjetning','Så bare deler av situasjonen, eller hadde dårlig sikt. Intensjonen og vurderingen av aksjonen er antakelser.'],
+  '2':['Usikker','Så aksjonen, men ikke alternativene han hadde. Intensjonen er en tolkning, og det er usikkert hvor godt han lyktes.'],
+  '3':['Rimelig sikker','Så aksjonen og de viktigste alternativene. Intensjonen er tydelig, men vurderingen av hvor godt han lyktes kan diskuteres.'],
+  '4':['Sikker','Så hele situasjonen og alternativene. Intensjonen, valget hans og hvor godt han lyktes er tydelig.'],
+  '5':['Svært sikker','Som 4, og han viser det samme i lignende situasjoner i kampen.']
 };
 const POSISJONER=['Keeper','Sideback','Midtstopper','Defensiv midtbane','Sentral midtbane','Indreløper','Ving','Spiss'];
 const FORMASJONER=['4-3-3','4-2-3-1','4-4-2','4-1-4-1','3-5-2','3-4-3','5-3-2'];
 const ATFERD=['Konstruktiv','Destruktiv'];
-const NONLIN='Fotballaksjoner er non-lineære. De kommer ikke alltid etter hverandre i en fast rekkefølge, men kan overlappe og påvirke hverandre. Bruk feltet når to aksjoner hører sammen, for eksempel når han ber om ballen og deretter mottar den. Da leses de to aksjonene i sammenheng i rapporten.';
+const NONLIN='Fotballaksjoner er non-lineære. De kommer ikke alltid etter hverandre i en fast rekkefølge, men kan overlappe og påvirke hverandre. Bruk feltet når to aksjoner hører sammen, for eksempel når han ber om ballen og deretter mottar den. Da leses de to aksjonene i sammenheng i rapporten. I Live gjør «Koble til forrige» det samme med ett trykk: knappen knytter den siste aksjonen du logget til aksjonen rett før.';
 const NOKKEL='livescouting:utkast:v1';
 
 /* ---------- Tilstand ---------- */
@@ -409,7 +430,7 @@ function renderLive(){
 }
 function renderFeed(){
   const n=S.aksjoner.length, a=S.aksjoner[n-1];
-  $('siste').innerHTML=a?`${pm(a)} ${esc(kortNavn(a))} <small>${esc(stedNavn(a))}${a.kobling?' · koblet til A'+a.kobling:''}</small>`:'Ingen aksjoner logget';
+  $('siste').innerHTML=a?`${pm(a)} ${esc(kortNavn(a))} <small>${esc(stedNavn(a))}${a.kobling?' · koblet til A'+a.kobling:''}${a.lyd&&a.lyd.length?' · tale':''}</small>`:'Ingen aksjoner logget';
   $('koble').disabled=n<2; $('angre').disabled=!n;
   $('koble').setAttribute('aria-pressed',!!(a&&a.kobling));
 }
@@ -423,11 +444,88 @@ function markerSiste(){
 function logg(type,utfall,knapp){
   const f=S.fase,k=kontekst(f,S.sone[f]);
   S.teller++;
-  S.aksjoner.push({id:S.teller,fase:f,oppgave:k.oppgave,rom:k.rom,type,oppnadd:utfall,...tidNa()});
+  S.aksjoner.push({id:S.teller,fase:f,oppgave:k.oppgave,rom:k.rom,type,oppnadd:utfall,trykk:utfall,...tidNa()});
   if(navigator.vibrate)navigator.vibrate(utfall==='Ja'?30:[20,40,20]);
   S.sisteKnapp={fase:f,type,utfall,id:S.teller};
   markerSiste();
   renderFeed();lagre();
+  stoppOpptak();visPanel(S.teller);
+}
+
+/* ---------- Hurtigpanel i Live ---------- */
+// Trykket på + eller − logger aksjonen. Panelet er valgfritt og gjelder aksjonen det ble åpnet for.
+const MIK='<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V22h2v-3.1A7 7 0 0 0 19 12h-2z"/></svg>';
+let panel=null,velgerApen=false,pt;
+function startPanelTimer(){clearTimeout(pt);pt=setTimeout(()=>{if(opptak||velgerApen)return startPanelTimer();panel=null;renderPanel()},8000)}
+function visPanel(id){panel=id;velgerApen=false;renderPanel();startPanelTimer()}
+function renderPanel(){
+  const a=panel&&finnA(panel),el=$('hurtig'),vis=!!a&&S.fane==='live';
+  el.classList.toggle('skjult',!vis);document.body.classList.toggle('panel',vis);
+  if(!vis){el.innerHTML='';return}
+  const o=OPPGAVER[a.fase],sj=a.oppgave===o.sjanse.id,rec=opptak&&opptak.ref==='a:'+a.id,n=(a.lyd||[]).length;
+  el.innerHTML=(velgerApen?`<div class="hvalg" role="group" aria-label="Individuell intensjon">${INT[a.fase].map(i=>`<button type="button" data-hint="${esc(i)}" aria-pressed="${a.intensjon===i}">${esc(i)}</button>`).join('')}</div>`:'')+
+  `<div class="hrad" role="group" aria-label="A${a.id} ${esc(a.type)}">
+    <div class="hg hg-int"><span class="hl">Intensjon</span><button type="button" class="hb" data-hvelg ${sj?'disabled':''} aria-expanded="${velgerApen}">${esc(sj?o.sjanse.implisitt:(a.intensjon||'Velg'))}</button></div>
+    <div class="hg"><span class="hl">Delvis</span><button type="button" class="hb" data-hdelvis aria-label="Delvis oppnådd" aria-pressed="${a.oppnadd==='Delvis'}">±</button></div>
+    <div class="hg"><span class="hl">Sikkerhet</span><div class="seg">${Object.keys(SIKKERHET).map(k=>`<button type="button" data-hsik="${k}" aria-label="Sikkerhet ${k}, ${SIKKERHET[k][0]}" aria-pressed="${a.sikkerhet===k}">${k}</button>`).join('')}</div></div>
+    <div class="hg"><span class="hl">Tale</span><button type="button" class="hb${rec?' opptar':''}" data-tale aria-label="${rec?'Stopp opptak':'Ta opp talenotat'}">${rec?'<span data-taletid>0:00</span>':MIK+(n?`<span>${n}</span>`:'')}</button></div>
+  </div>`;
+}
+function hurtigKlikk(t){
+  if(t.closest('#siste')){const a=S.aksjoner[S.aksjoner.length-1];if(a)visPanel(a.id);return}
+  const a=panel&&finnA(panel);if(!a)return;
+  startPanelTimer();
+  const hi=t.closest('[data-hint]'),hs=t.closest('[data-hsik]');
+  if(t.closest('[data-hvelg]'))velgerApen=!velgerApen;
+  else if(hi){a.intensjon=a.intensjon===hi.dataset.hint?'':hi.dataset.hint;velgerApen=false}
+  else if(t.closest('[data-hdelvis]'))a.oppnadd=a.oppnadd==='Delvis'?(a.trykk||'Ja'):'Delvis';
+  else if(hs)a.sikkerhet=a.sikkerhet===hs.dataset.hsik?'':hs.dataset.hsik;
+  else if(t.closest('[data-tale]')){const ref='a:'+a.id;opptak&&opptak.ref===ref?stoppOpptak():startOpptak(ref);return}
+  else return;
+  renderPanel();renderFeed();lagre();
+}
+
+/* ---------- Talenotat ---------- */
+// Lyden lagres på telefonen (IndexedDB) og knyttes til en aksjon ('a:id') eller en karakterobservasjon ('k:id').
+let opptak=null,spiller=null;
+const mmss=s=>{s=Math.floor(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function varsle(m){const e=$('toast');e.textContent=m;e.classList.remove('skjult');clearTimeout(varsle.t);varsle.t=setTimeout(()=>e.classList.add('skjult'),3500)}
+function lydliste(ref){const [t,id]=ref.split(':'),o=t==='a'?finnA(id):S.karakter.find(k=>k.id===id);return o?(o.lyd||(o.lyd=[])):null}
+function visOpptak(){if(S.fane==='live')renderPanel();if(S.fane==='utfylling')renderUtfylling()}
+async function startOpptak(ref){
+  if(opptak)await stoppOpptak();
+  if(!navigator.mediaDevices||!window.MediaRecorder){varsle('Opptak støttes ikke i denne nettleseren.');return}
+  let strom;try{strom=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){varsle('Fikk ikke tilgang til mikrofonen.');return}
+  let rec;try{rec=new MediaRecorder(strom)}catch(e){strom.getTracks().forEach(t=>t.stop());varsle('Opptak støttes ikke i denne nettleseren.');return}
+  const biter=[],o=opptak={rec,ref,start:Date.now()};
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)biter.push(e.data)};
+  o.ferdig=new Promise(ok=>{rec.onstop=async()=>{
+    strom.getTracks().forEach(t=>t.stop());
+    try{const l=lydliste(ref),blob=new Blob(biter,{type:rec.mimeType||(biter[0]&&biter[0].type)||'audio/mp4'});
+      if(l&&blob.size){const k=S.id+':'+Date.now();await idbPut(LYD,k,{buf:await blob.arrayBuffer(),type:blob.type});
+        l.push({k,s:Math.max(1,Math.round((Date.now()-o.start)/1000))});lagreNa()}
+    }catch(e){varsle('Talenotatet ble ikke lagret.')}
+    ok()}});
+  rec.start();
+  o.maks=setTimeout(stoppOpptak,60000);
+  visOpptak();
+}
+async function stoppOpptak(){const o=opptak;if(!o)return;opptak=null;clearTimeout(o.maks);try{if(o.rec.state!=='inactive')o.rec.stop()}catch(e){}await o.ferdig;visOpptak();if(S.fane==='live')renderFeed()}
+setInterval(()=>{if(opptak)document.querySelectorAll('[data-taletid]').forEach(e=>e.textContent=mmss((Date.now()-opptak.start)/1000))},500);
+async function spill(knapp){
+  if(spiller){spiller.pause();spiller.remove();spiller=null}
+  let d;try{d=await idbGet(LYD,knapp.dataset.spill)}catch(e){}
+  if(!d){varsle('Fant ikke talenotatet.');return}
+  // Avspilleren vises med egne kontroller, i tilfelle telefonen ikke starter lyden av seg selv
+  spiller=new Audio(URL.createObjectURL(new Blob([d.buf],{type:d.type})));spiller.controls=true;
+  knapp.closest('.lydrad').appendChild(spiller);spiller.play().catch(()=>{});
+}
+function slettAlleLyd(o){((o&&o.lyd)||[]).forEach(l=>idbDel(LYD,l.k).catch(()=>{}))}
+function slettLyd(k){[...S.aksjoner,...S.karakter].forEach(o=>{if(o.lyd)o.lyd=o.lyd.filter(l=>l.k!==k)});idbDel(LYD,k).catch(()=>{})}
+function lydHTML(o,ref){
+  const rec=opptak&&opptak.ref===ref;
+  return `<div class="lydrad">${(o.lyd||[]).map(l=>`<button type="button" class="knapp sek" data-spill="${esc(l.k)}">Spill av talenotat (${mmss(l.s)})</button><button type="button" class="knapp sek" data-lydslett="${esc(l.k)}">Slett talenotat</button>`).join('')}
+    <button type="button" class="knapp ${rec?'':'sek'}" data-taleopp="${ref}">${rec?'Stopp opptak <span data-taletid>0:00</span>':'Ta opp talenotat'}</button></div>`;
 }
 
 /* ---------- Formasjon, posisjon og karakter ---------- */
@@ -440,11 +538,13 @@ function oppstillingHTML(){
     +'<button type="button" class="knapp sek" data-oppny>Legg til endring</button>';
 }
 function karakterHTML(){
+  S.karakter.forEach(k=>{if(!k.id)k.id=nyId()});
   return S.karakter.map((k,i)=>`<div class="krad" data-kar="${i}">
     <div class="rad"><label class="f" style="width:90px">Minutt<input type="number" min="0" max="130" data-k="min" value="${esc(k.min)}"></label>
       <div class="chips" style="margin:0;align-self:flex-end">${ATFERD.map(v=>`<button type="button" class="chip" data-ktype="${v}" aria-pressed="${k.type===v}">${v}</button>`).join('')}</div></div>
     <textarea data-k="tekst" placeholder="Hva gjorde han, og i hvilken situasjon?">${esc(k.tekst)}</textarea>
-    <button type="button" class="knapp sek" data-karslett="${i}">Fjern</button></div>`).join('')
+    ${lydHTML(k,'k:'+k.id)}
+    <div style="margin-top:8px"><button type="button" class="knapp sek" data-karslett="${i}">Fjern</button></div></div>`).join('')
     +'<button type="button" class="knapp sek" data-karny>Legg til observasjon</button>';
 }
 $('formasjoner').innerHTML=FORMASJONER.map(f=>`<option value="${f}">`).join('');
@@ -486,7 +586,7 @@ function radAkt(a){
     <button class="hode" data-apne="${a.id}" aria-expanded="${apen}">
       <span class="id">A${a.id}</span><span class="t">${tid(a)?esc(tid(a))+' ':''}${esc(a.type)}</span>
       <span class="pm" aria-label="Oppnådd: ${a.oppnadd||'ikke satt'}">${pm(a)}</span>
-      <span class="st">${utfylt(a)?'✓ Utfylt':'Ikke utfylt'}</span></button>
+      ${a.lyd&&a.lyd.length?'<span class="st">Tale</span>':''}<span class="st">${utfylt(a)?'✓ Utfylt':'Ikke utfylt'}</span></button>
     ${apen?detalj(a):''}</div>`;
 }
 const ptrh=(a,pre,hint)=>`<div class="ptrh">${PTRH.map(p=>`<label class="f">${p.n}<textarea data-a="${pre}${p.k}" placeholder="${hint}">${esc(a[pre+p.k])}</textarea></label>`).join('')}</div>`;
@@ -501,6 +601,7 @@ function detalj(a){
       <label class="f">Minutt${a.ts?` <span style="font-weight:400">(logget kl. ${klokkeslett(a.ts)})</span>`:''}<input type="number" min="0" max="130" data-a="min" value="${esc(a.min)}"></label>
       <div class="f"><button type="button" class="infoknapp" data-nonlin aria-label="Hva betyr non-lineær aksjon?">Henger sammen med (non-lineær aksjon) <span class="i" aria-hidden="true">ⓘ</span></button><select data-a="kobling" aria-label="Henger sammen med"><option value="">Ingen</option>${andre}</select></div>
     </div>
+    ${lydHTML(a,'a:'+a.id)}
     <p class="q" style="margin-top:8px">Fotballaksjon</p><div class="chips">${chips(aksjonerFor(f,sjanse).includes(a.type)?aksjonerFor(f,sjanse):[...aksjonerFor(f,sjanse),a.type],a.type,'data-a="type"')}</div>${DEF[a.type]?`<p class="def-utf"><b>${esc(a.type)}:</b> ${DEF[a.type]}</p>`:''}</div>
     <div class="steg"><h4><span class="nr">1</span>Kommunisere</h4>
       <p class="q">Hvordan kommuniserte han med med- og motspillere?</p><textarea data-a="kommunisere">${esc(a.kommunisere)}</textarea></div>
@@ -558,6 +659,7 @@ function render(){
   if(S.fane==='live'){renderLive();renderFeed()}
   if(S.fane==='utfylling')renderUtfylling();
   if(S.fane==='rapport')renderRapport();
+  renderPanel();
   if(S.fane==='kamp'){document.querySelectorAll('[data-meta]').forEach(m=>m.value=S.meta[m.dataset.meta]||'');$('opp-kamp').innerHTML=oppstillingHTML()}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.fane==='live'){hold(true);klokkeTekst()}});
@@ -566,11 +668,18 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 // Alt som lagres går gjennom lagreNa() og hent(). Trinn 2 (innlogging og synkronisering) kobles på her.
 // Utkastet skrives både til IndexedDB og localStorage. localStorage skrives synkront, så siste trykk
 // overlever også når telefonen lukker appen brått.
-const DB='livescouting',BUTIKK='utkast';
+const DB='livescouting',BUTIKK='utkast',LYD='lyd';
 let dbp;
-const db=()=>dbp||(dbp=new Promise((ok,feil)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(BUTIKK);r.onsuccess=()=>ok(r.result);r.onerror=()=>feil(r.error)}));
-async function idbSett(v){const d=await db();return new Promise((ok,feil)=>{const t=d.transaction(BUTIKK,'readwrite');t.objectStore(BUTIKK).put(v,NOKKEL);t.oncomplete=()=>ok();t.onerror=()=>feil(t.error)})}
-async function idbHent(){const d=await db();return new Promise((ok,feil)=>{const r=d.transaction(BUTIKK).objectStore(BUTIKK).get(NOKKEL);r.onsuccess=()=>ok(r.result);r.onerror=()=>feil(r.error)})}
+const db=()=>dbp||(dbp=new Promise((ok,feil)=>{const r=indexedDB.open(DB,2);
+  r.onupgradeneeded=()=>{[BUTIKK,LYD].forEach(n=>{if(!r.result.objectStoreNames.contains(n))r.result.createObjectStore(n)})};
+  r.onsuccess=()=>ok(r.result);r.onerror=()=>feil(r.error)}));
+async function idbKjor(butikk,modus,fn){const d=await db();return new Promise((ok,feil)=>{const t=d.transaction(butikk,modus),r=fn(t.objectStore(butikk));t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>feil(t.error)})}
+const idbPut=(b,k,v)=>idbKjor(b,'readwrite',o=>o.put(v,k));
+const idbGet=(b,k)=>idbKjor(b,'readonly',o=>o.get(k));
+const idbDel=(b,k)=>idbKjor(b,'readwrite',o=>o.delete(k));
+const idbClear=b=>idbKjor(b,'readwrite',o=>o.clear());
+const idbSett=v=>idbPut(BUTIKK,NOKKEL,v);
+const idbHent=()=>idbGet(BUTIKK,NOKKEL);
 let lt;
 function lagreNa(){
   clearTimeout(lt);lt=null;S.oppdatert=Date.now();
@@ -592,7 +701,7 @@ async function hent(){
     if(S.sum.kondisjon&&!S.sum.kondisjon1){S.sum.kondisjon1=S.sum.kondisjon;S.sum.kondisjon=''}}
 }
 const lagreVedLukking=()=>{if(lt)lagreNa()};
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')lagreVedLukking()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){stoppOpptak();lagreVedLukking()}});
 window.addEventListener('pagehide',lagreVedLukking);
 function vis(m){const s=$('status');if(!s)return;s.textContent=m;clearTimeout(vis.t);vis.t=setTimeout(()=>s.textContent='',2500)}
 
@@ -601,12 +710,16 @@ const finnA=id=>S.aksjoner.find(a=>String(a.id)===String(id));
 document.addEventListener('click',e=>{
   const t=e.target;
   const fane=t.closest('[data-fane]')||t.closest('[data-ga]');
-  if(fane){S.fane=fane.dataset.fane||fane.dataset.ga;render();lagre();window.scrollTo(0,0);return}
+  if(fane){stoppOpptak();S.fane=fane.dataset.fane||fane.dataset.ga;render();lagre();window.scrollTo(0,0);return}
+  if(t.closest('#hurtig')||t.closest('#siste')){hurtigKlikk(t);return}
+  const to=t.closest('[data-taleopp]');if(to){const ref=to.dataset.taleopp;opptak&&opptak.ref===ref?stoppOpptak():startOpptak(ref);return}
+  const sp=t.closest('[data-spill]');if(sp){spill(sp);return}
+  const ld=t.closest('[data-lydslett]');if(ld){if(confirm('Slette talenotatet?')){slettLyd(ld.dataset.lydslett);renderUtfylling();lagre()}return}
   const lf=t.closest('[data-livefase]');if(lf){S.fase=lf.dataset.livefase;renderLive();lagre();return}
   const so=t.closest('[data-sone]');
   if(so){const f=S.fase;S.sone[f]=S.sone[f]===so.dataset.sone?'':so.dataset.sone;renderLive();lagre();return}
   if(t.closest('[data-sikinfo]')){$('deftittel').textContent='Sikkerhet';
-    $('deftekst').innerHTML='<p>Hvor sikker du er på at du har lest hele beslutningen riktig: både hva han ville (individuell intensjon) og hvordan han valgte å gjøre det (variant).</p><dl class="sikliste">'+Object.entries(SIKKERHET).map(([k,[n,d]])=>`<dt>${k}: ${n}</dt><dd>${d}</dd>`).join('')+'</dl>';
+    $('deftekst').innerHTML='<p>Hvor sikker du er på at du har lest aksjonen riktig: hva han ville (individuell intensjon), hvordan han valgte å gjøre det (variant) og hvor godt han lyktes.</p><dl class="sikliste">'+Object.entries(SIKKERHET).map(([k,[n,d]])=>`<dt>${k}: ${n}</dt><dd>${d}</dd>`).join('')+'</dl>';
     $('defark').classList.remove('skjult');$('deflukk').focus();return}
   if(t.closest('[data-nonlin]')){$('deftittel').textContent='Non-lineær aksjon';$('deftekst').innerHTML='<p>'+esc(NONLIN)+'</p>';$('defark').classList.remove('skjult');$('deflukk').focus();return}
   const df=t.closest('[data-def]');
@@ -622,20 +735,20 @@ document.addEventListener('click',e=>{
       if(neste===1||neste===2){k.startTs=Date.now();k.justering=0}
       k.periode=neste}
     klokkeTekst();lagre();return}
-  if(t.closest('#angre')){const a=S.aksjoner.pop();if(a){S.aksjoner.forEach(x=>{if(String(x.kobling)===String(a.id))x.kobling=''});const f=S.aksjoner[S.aksjoner.length-1];S.sisteKnapp=f?{fase:f.fase,type:f.type,utfall:f.oppnadd,id:f.id}:null;markerSiste();renderFeed();lagre()}return}
-  if(t.closest('#koble')){const n=S.aksjoner.length;if(n>1){const a=S.aksjoner[n-1];a.kobling=a.kobling?'':S.aksjoner[n-2].id;renderFeed();lagre()}return}
+  if(t.closest('#angre')){const a=S.aksjoner.pop();if(a){slettAlleLyd(a);if(opptak&&opptak.ref==='a:'+a.id)stoppOpptak();panel=null;renderPanel();S.aksjoner.forEach(x=>{if(String(x.kobling)===String(a.id))x.kobling=''});const f=S.aksjoner[S.aksjoner.length-1];S.sisteKnapp=f?{fase:f.fase,type:f.type,utfall:f.oppnadd,id:f.id}:null;markerSiste();renderFeed();lagre()}return}
+  if(t.closest('#koble')){const n=S.aksjoner.length;if(n>1){const a=S.aksjoner[n-1];a.kobling=a.kobling?'':S.aksjoner[n-2].id;renderFeed();lagre();varsle(a.kobling?`A${a.id} er koblet til A${a.kobling}. Det er det samme som «Henger sammen med» i Utfylling.`:`Koblingen mellom A${a.id} og aksjonen før er fjernet.`)}return}
   const visOpp=()=>{$('opp-kamp').innerHTML=$('opp-utf').innerHTML=oppstillingHTML()};
   if(t.closest('[data-oppny]')){const f=S.oppstilling[S.oppstilling.length-1];S.oppstilling.push({min:minutt()||'',formasjon:f.formasjon,posisjon:f.posisjon});visOpp();lagre();return}
   const os=t.closest('[data-oppslett]');if(os){S.oppstilling.splice(+os.dataset.oppslett,1);visOpp();lagre();return}
-  if(t.closest('[data-karny]')){S.karakter.push({min:minutt()||'',type:'',tekst:''});$('karakter').innerHTML=karakterHTML();lagre();return}
-  const ks=t.closest('[data-karslett]');if(ks){if(confirm('Fjerne denne observasjonen?')){S.karakter.splice(+ks.dataset.karslett,1);$('karakter').innerHTML=karakterHTML();lagre()}return}
+  if(t.closest('[data-karny]')){S.karakter.push({id:nyId(),min:minutt()||'',type:'',tekst:'',lyd:[]});$('karakter').innerHTML=karakterHTML();lagre();return}
+  const ks=t.closest('[data-karslett]');if(ks){if(confirm('Fjerne denne observasjonen?')){slettAlleLyd(S.karakter.splice(+ks.dataset.karslett,1)[0]);$('karakter').innerHTML=karakterHTML();lagre()}return}
   const kt=t.closest('[data-ktype]');if(kt){const k=S.karakter[+kt.closest('[data-kar]').dataset.kar];k.type=k.type===kt.dataset.ktype?'':kt.dataset.ktype;$('karakter').innerHTML=karakterHTML();lagre();return}
   const fl=t.closest('[data-filter]');if(fl){S.filter=fl.dataset.filter;renderUtfylling();lagre();return}
   const ap=t.closest('[data-apne]');
   if(ap){const id=+ap.dataset.apne;S.apen=S.apen===id?null:id;renderUtfylling();lagre();
     document.querySelector(`.rad-akt[data-id="${id}"]`)?.scrollIntoView({block:'nearest'});return}
   const sl=t.closest('[data-slett]');
-  if(sl){if(confirm('Slette denne aksjonen?')){const id=sl.dataset.slett;S.aksjoner=S.aksjoner.filter(a=>String(a.id)!==id);
+  if(sl){if(confirm('Slette denne aksjonen?')){const id=sl.dataset.slett;slettAlleLyd(finnA(id));S.aksjoner=S.aksjoner.filter(a=>String(a.id)!==id);
     S.aksjoner.forEach(x=>{if(String(x.kobling)===id)x.kobling=''});renderUtfylling();lagre()}return}
   const mn=t.closest('[data-manuell]');
   if(mn){S.teller++;S.aksjoner.push({id:S.teller,fase:mn.dataset.manuell,oppgave:'',rom:'',type:mn.dataset.v,min:'',manuell:true});S.apen=S.teller;S.filter='alle';renderUtfylling();lagre();return}
@@ -689,6 +802,7 @@ function tekst(){
       const sj=a.oppgave===o.sjanse.id;
       L.push(`  ${pm(a)} ${kortNavn(a)}`);
       if(a.kobling){const x=finnA(a.kobling);if(x)L.push(`    Henger sammen med: ${kortNavn(x)}`)}
+      if(a.lyd&&a.lyd.length)L.push(`    Talenotat på telefonen: ${a.lyd.map(l=>mmss(l.s)).join(', ')}`);
       if(a.kommunisere)L.push(`    Kommunisere: ${a.kommunisere}`);
       const i=sj?o.sjanse.implisitt:a.intensjon;
       if(i||a.hva)L.push(`    Beslutte hva: ${[i,a.hva].filter(Boolean).join('. ')}`);
@@ -699,8 +813,8 @@ function tekst(){
     if(S.gruppesum[key])L.push(`  Oppsummering: ${S.gruppesum[key]}`);
     L.push('');
   });
-  const kar=S.karakter.filter(k=>k.tekst||k.type);
-  if(kar.length){L.push('PROFESJONALITET OG KARAKTER');kar.forEach(k=>L.push(`  ${[k.min?k.min+"'":'',k.type,k.tekst].filter(Boolean).join(' ')}`));L.push('')}
+  const kar=S.karakter.filter(k=>k.tekst||k.type||(k.lyd&&k.lyd.length));
+  if(kar.length){L.push('PROFESJONALITET OG KARAKTER');kar.forEach(k=>L.push(`  ${[k.min?k.min+"'":'',k.type,k.tekst,k.lyd&&k.lyd.length?'(talenotat på telefonen: '+k.lyd.map(l=>mmss(l.s)).join(', ')+')':''].filter(Boolean).join(' ')}`));L.push('')}
   L.push('OPPSUMMERING',`Samlet nivå: ${S.sum.niva||'-'}`,`Sterkest: ${S.sum.sterkest||'-'}`,`Svakest: ${S.sum.svakest||'-'}`);
   if(S.sum.neste)L.push(`Neste rapport: ${S.sum.neste}`);
   if(['In-depth','Live'].includes(m.type)){
@@ -712,7 +826,7 @@ $('kopier').onclick=async()=>{const t=tekst();
   try{await navigator.clipboard.writeText(t);vis('Notatene er kopiert')}
   catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');vis('Notatene er kopiert')}catch(_){vis('Kopiering feilet')}a.remove()}};
 $('skriv').onclick=()=>{$('utskrift').textContent=tekst();window.print()};
-$('nytt').onclick=()=>{if(confirm('Tømme skjemaet? Alle aksjoner og notater slettes.')){S=tomState();render();lagre();vis('Nytt skjema')}};
+$('nytt').onclick=()=>{if(confirm('Tømme skjemaet? Alle aksjoner og notater slettes.')){stoppOpptak();idbClear(LYD).catch(()=>{});panel=null;S=tomState();render();lagre();vis('Nytt skjema')}};
 
 hent().then(render);
 // Be nettleseren om ikke å rydde bort lagrede data, og gjør appen tilgjengelig uten nett
