@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live scouting | SK Brann</title>
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#C60513">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Live scouting">
+<link rel="apple-touch-icon" href="ikon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="ikon-192.png">
+<style>
+:root{--bg:#FFFFFF;--ink:#2B2626;--red:#C60513;--on-red:#FFFFFF;--line:#2B2626;--accent-text:#C60513;--field:#FFFFFF;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--bg:#2B2626;--ink:#FFFFFF;--line:#FFFFFF;--accent-text:#FFFFFF;--field:#2B2626;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Mont,Arial,Helvetica,sans-serif}
+h1,h2,h3{font-family:"FK Screamer","Arial Black",Arial,sans-serif;font-weight:900;line-height:.95;margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.wrap{max-width:900px;margin:0 auto;padding:0 14px}
+.skjult{display:none!important}
+
+/* Topp og faner */
+.topp{background:var(--red);color:var(--on-red)}
+.topp .wrap{display:flex;align-items:center;gap:12px;padding-top:10px;padding-bottom:10px}
+.topp h1{font-size:26px;font-style:italic;white-space:nowrap}
+.faner{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.faner button{background:transparent;border:2px solid var(--on-red);color:var(--on-red);border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;cursor:pointer}
+.faner button[aria-selected=true]{background:var(--on-red);color:var(--red)}
+.vis{padding:12px 0 calc(90px + env(safe-area-inset-bottom))}
+@media (max-width:520px){.topp h1{font-size:19px}.topp .wrap{gap:8px}.faner{gap:3px}.faner button{padding:4px 8px;font-size:12px}}
+h2{font-size:28px;color:var(--accent-text);margin:6px 0 8px}
+.ingress{margin:0 0 14px;max-width:66ch}
+
+/* Felter */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
+input[type=text],input[type=date],input[type=number],select,textarea{font:inherit;font-weight:400;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:4px;padding:8px 10px;width:100%}
+textarea{min-height:60px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 8px}
+.chip{font-size:14px;font-weight:700;background:var(--field);border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--red);border-color:var(--red);color:var(--on-red)}
+.knapp{font-weight:700;padding:10px 16px;border-radius:4px;cursor:pointer;border:2px solid var(--red);background:var(--red);color:var(--on-red)}
+.knapp.sek{background:var(--field);color:var(--ink);border-color:var(--line)}
+
+/* LIVE */
+.livebar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-bottom:8px}
+.klokke{flex:1 1 280px;justify-content:space-between;display:flex;align-items:center;gap:6px;border:2px solid var(--line);border-radius:8px;padding:4px 8px}
+.klokke .min{font:900 30px "Arial Black",Arial,sans-serif;min-width:62px;text-align:center}
+.klokke button{border:1.5px solid var(--line);background:var(--field);border-radius:6px;padding:6px 9px;font-weight:700;cursor:pointer}
+.klokke .start{background:var(--red);border-color:var(--red);color:var(--on-red)}
+.fasevalg{flex:1 1 220px;display:flex;border:2px solid var(--line);border-radius:8px;overflow:hidden}
+.fasevalg button{flex:1;border:0;background:var(--field);font:900 18px "Arial Black",Arial,sans-serif;cursor:pointer;padding:8px}
+.fasevalg button[aria-pressed=true]{background:var(--red);color:var(--on-red)}
+.sonevalg{border:2px solid var(--line);border-radius:8px;padding:6px;margin-bottom:8px}
+.sonevalg svg{width:100%;height:auto;display:block}
+.sone{cursor:pointer}
+.sone rect{fill:var(--field);stroke:var(--line);stroke-width:1.5}
+.sone text{fill:var(--ink);font:700 15px Arial,sans-serif;pointer-events:none}
+.sone[aria-pressed=true] rect{fill:var(--red);stroke:var(--red)}
+.sone[aria-pressed=true] text{fill:var(--on-red)}
+.sone:focus{outline:none}.sone:focus-visible rect{stroke:var(--red);stroke-width:4}
+.ledd line{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:4 4}
+.ledd circle{fill:var(--ink);stroke:var(--field);stroke-width:2}
+.sjanse{width:100%;margin-top:6px;border:2px solid var(--line);background:var(--field);border-radius:6px;padding:8px;font:900 16px "Arial Black",Arial,sans-serif;cursor:pointer}
+.sjanse[aria-pressed=true]{background:var(--red);border-color:var(--red);color:var(--on-red)}
+.aksjongrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:6px}
+.gruppelbl{grid-column:1/-1;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:2px 0 -2px}
+.tile{border:2px solid var(--line);border-radius:8px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr auto}
+.tile .navn{grid-column:1/3;display:flex;align-items:center;justify-content:center;gap:4px;text-align:center;font-weight:700;font-size:13px;line-height:1.15;padding:4px 4px;min-height:34px;border:0;border-bottom:1.5px solid var(--line);background:var(--field);color:var(--ink);cursor:help;font-family:inherit}
+.tile .navn .i{font-weight:400;font-size:11px}
+.defark{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--field);border-top:4px solid var(--red);padding:16px 0 calc(22px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(0,0,0,.25)}
+.defark h3{font-size:22px;color:var(--accent-text);margin:0 0 6px}
+.defark p{margin:0 0 12px;max-width:60ch}
+.def-utf{font-size:14px;margin:-2px 0 8px}
+.tile button{border:0;background:var(--field);font:900 30px "Arial Black",Arial,sans-serif;min-height:52px;cursor:pointer;touch-action:manipulation}
+.tile button.minus{border-right:1.5px solid var(--line)}
+.tile button:active,.tile button.sist{background:var(--red);color:var(--on-red)}
+.tile.sist{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
+.feed{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:2px solid var(--line)}
+.feed .wrap{display:flex;gap:8px;align-items:center;padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+.feed .siste{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed .siste small{font-weight:400}
+.feed button{border:2px solid var(--line);background:var(--field);border-radius:6px;padding:8px 10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.feed button[aria-pressed=true]{background:var(--red);border-color:var(--red);color:var(--on-red)}
+.varsel{font-weight:700;color:var(--accent-text);margin:2px 0 6px;font-size:13px;line-height:1.3}
+
+/* UTFYLLING */
+.filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.gruppe{margin-bottom:22px}
+.gruppe>h3{font-size:17px;line-height:1.25;margin:0 0 6px;font-family:Arial,sans-serif;font-weight:700}
+.gruppe>h3 .ff{color:var(--accent-text)}
+.rad-akt{border:2px solid var(--line);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.rad-akt>button.hode{width:100%;display:flex;gap:10px;align-items:center;background:var(--field);border:0;padding:10px 12px;cursor:pointer;text-align:left}
+.id{font-size:13px;font-weight:700;background:var(--red);color:var(--on-red);border-radius:4px;padding:2px 6px}
+.hode .t{flex:1;font-weight:700}
+.hode .pm{font:900 20px "Arial Black",Arial,sans-serif;min-width:20px;text-align:center}
+.hode .st{font-size:13px}
+.detalj{border-top:2px solid var(--line)}
+.steg{padding:6px 14px 10px;border-bottom:1.5px solid var(--line)}
+.steg:last-child{border-bottom:0}
+.steg h4{display:flex;align-items:center;gap:10px;margin:8px 0 2px;font-size:16px}
+.nr{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;flex:none;background:var(--red);color:var(--on-red);font:900 13px "Arial Black",Arial,sans-serif}
+.q{margin:0;font-size:14px}
+.fotnote{font-size:13px;font-style:italic;margin:0 0 8px}
+.ptrh{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:6px 0 4px}
+.ptrh textarea{min-height:50px}
+.vurd{border-top:1.5px dashed var(--line);margin-top:10px;padding-top:6px}
+.rad{display:flex;flex-wrap:wrap;gap:0 16px;align-items:center}
+.rad .lbl{font-weight:700;font-size:14px;min-width:90px}
+.infoknapp{background:none;border:0;padding:0;text-align:left;cursor:help;font-family:inherit;color:var(--ink)}
+.infoknapp .i,.tile .navn .i{font-weight:400;font-size:12px}
+.sikliste{margin:0 0 12px;font-size:14px}.sikliste dt{font-weight:700}.sikliste dd{margin:0 0 4px}
+.defark{max-height:80vh;overflow:auto}
+details.hjelp{font-size:14px;margin:2px 0 8px}
+details.hjelp summary{cursor:pointer;font-weight:700;text-decoration:underline}
+details.hjelp dl{margin:6px 0 0}
+details.hjelp dt{font-weight:700}
+details.hjelp dd{margin:0 0 4px}
+.tom{font-style:italic}
+
+/* RAPPORT */
+table.stat{border-collapse:collapse;width:100%;font-size:14px;margin:6px 0 16px}
+table.stat th,table.stat td{border:1.5px solid var(--line);padding:6px 8px;text-align:left}
+table.stat td.n{text-align:center;width:60px}
+.tabell{overflow-x:auto}
+.knapper{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+#status{font-size:14px;font-weight:700}
+#utskrift{display:none;white-space:pre-wrap;font:13px/1.5 Arial,sans-serif}
+@media print{body>*:not(#utskrift){display:none!important}#utskrift{display:block}}
+</style>
+</head>
+<body>
+<header class="topp">
+  <div class="wrap">
+    <h1>Live scouting</h1>
+    <nav class="faner" role="tablist" aria-label="Del av skjemaet">
+      <button role="tab" data-fane="kamp">Kamp</button>
+      <button role="tab" data-fane="live">Live</button>
+      <button role="tab" data-fane="utfylling">Utfylling</button>
+      <button role="tab" data-fane="rapport">Rapport</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- KAMP -->
+  <section class="vis" data-vis="kamp">
+    <h2>Kamp og spiller</h2>
+    <p class="ingress">Fyll ut før kampen. Under kampen logger du i Live med ett trykk per fotballaksjon. I pausen og etter kampen fyller du ut komponentene i Utfylling.</p>
+    <div class="grid">
+      <label class="f">Spiller<input type="text" data-meta="spiller"></label>
+      <label class="f">Klubb<input type="text" data-meta="klubb"></label>
+      <label class="f">Posisjon<select data-meta="posisjon"><option value="">Velg</option><option>Keeper</option><option>Sideback</option><option>Midtstopper</option><option>Defensiv midtbane</option><option>Sentral midtbane</option><option>Indreløper</option><option>Ving</option><option>Spiss</option></select></label>
+      <label class="f">Kamp<input type="text" data-meta="kamp" placeholder="Hjemmelag mot bortelag"></label>
+      <label class="f">Dato<input type="date" data-meta="dato"></label>
+      <label class="f">Rapporttype<select data-meta="type"><option value="">Velg</option><option>Screening</option><option>In-depth</option><option>Live</option></select></label>
+      <label class="f">Scout<input type="text" data-meta="scout"></label>
+    </div>
+    <div class="knapper"><button class="knapp" data-ga="live">Gå til Live</button></div>
+  </section>
+
+  <!-- LIVE -->
+  <section class="vis" data-vis="live">
+    <div class="livebar">
+      <div class="klokke" aria-label="Kampklokke">
+        <button data-klokke="minus" aria-label="Trekk fra ett minutt">−1</button>
+        <span class="min" id="min">–</span>
+        <button data-klokke="pluss" aria-label="Legg til ett minutt">+1</button>
+        <button class="start" data-klokke="neste" id="klokkeknapp">Start 1. omg</button>
+      </div>
+      <div class="fasevalg" role="group" aria-label="Fase">
+        <button data-livefase="angrep">Angrep</button>
+        <button data-livefase="forsvar">Forsvar</button>
+      </div>
+    </div>
+    <div class="sonevalg" id="sonevalg"></div>
+    <p class="varsel skjult" id="ingenklokke">Kampklokken går ikke. Aksjonene får klokkeslett, men ikke kampminutt.</p>
+    <p class="varsel skjult" id="ingensone">Ingen sone valgt. Aksjonen logges uten lagsintensjon, og du velger den i Utfylling.</p>
+    <div class="aksjongrid" id="aksjongrid"></div>
+  </section>
+
+  <!-- UTFYLLING -->
+  <section class="vis" data-vis="utfylling">
+    <h2>Utfylling</h2>
+    <p class="ingress">Fyll ut i pausen eller etter kampen. Aksjonene er sortert etter lagsoppgave og lagsintensjon. Trykk på en aksjon for å åpne komponentene.</p>
+    <div class="filter" id="filter"></div>
+    <div id="liste"></div>
+    <details class="hjelp"><summary>Legg til aksjon manuelt</summary>
+      <p class="q">Velg fase og aksjon. Lagsintensjon og minutt setter du i kortet.</p>
+      <div class="chips" id="manuell"></div>
+    </details>
+  </section>
+
+  <!-- RAPPORT -->
+  <section class="vis" data-vis="rapport">
+    <h2>Rapport</h2>
+    <h3 style="font-size:18px;font-family:Arial,sans-serif;font-weight:700">Oppnådd individuell intensjon per lagsintensjon</h3>
+    <div class="tabell" id="stat"></div>
+    <div class="steg" style="border:2px solid var(--line);border-radius:8px;padding-bottom:14px">
+      <h4>Samlet nivå</h4>
+      <div class="chips" id="sumniva"></div>
+      <div class="grid">
+        <label class="f">Sterkeste individuelle intensjon<select data-sumsel="sterkest"></select></label>
+        <label class="f">Svakeste individuelle intensjon<select data-sumsel="svakest"></select></label>
+      </div>
+      <label class="f" style="margin-top:12px">Hva må neste rapport se etter?<textarea data-sumtxt="neste" placeholder="Hvilken intensjon eller hvilket rom fikk du ikke sett nok av?"></textarea></label>
+      <label class="f skjult" id="fk" style="margin-top:12px">Fotballkondisjon<textarea data-sumtxt="kondisjon" placeholder="Flere aksjoner, opprettholder antall aksjoner og kvaliteten på aksjonene gjennom kampen"></textarea></label>
+    </div>
+    <div class="knapper">
+      <button class="knapp" id="kopier">Kopier notater</button>
+      <button class="knapp sek" id="skriv">Skriv ut</button>
+      <button class="knapp sek" id="nytt">Nytt skjema</button>
+      <span id="status" aria-live="polite"></span>
+    </div>
+  </section>
+</main>
+
+<div class="feed" id="feed"><div class="wrap">
+  <span class="siste" id="siste">Ingen aksjoner logget</span>
+  <button id="koble" aria-pressed="false" title="Koble siste aksjon til aksjonen før">Koble</button>
+  <button id="angre">Angre</button>
+</div></div>
+<div class="defark skjult" id="defark" role="dialog" aria-modal="false" aria-labelledby="deftittel"><div class="wrap"><h3 id="deftittel"></h3><div id="deftekst"></div><button class="knapp" id="deflukk">Lukk</button></div></div>
+<pre id="utskrift"></pre>
+
+<script>
+/* ---------- Rammeverk ---------- */
+const OPPGAVER={
+  angrep:{rom:{id:'skape',navn:'Skape målsjanse'},sjanse:{id:'omsette',navn:'Omsette målsjanse',implisitt:'Skape progresjon',forklaring:'få ballen i mål'}},
+  forsvar:{rom:{id:'hindre',navn:'Hindre målsjanse'},sjanse:{id:'noytralisere',navn:'Nøytralisere målsjanse',implisitt:'Hindre progresjon',forklaring:'hindre ballen i mål'}}
+};
+const ROM={
+  angrep:[
+    {id:'bak-bakre',navn:'Bak bakre ledd',lang:'Utnytte rom bak bakre ledd'},
+    {id:'bak-midtre',navn:'Bak midtre ledd',lang:'Utnytte rom bak midtre ledd'},
+    {id:'bak-fremre',navn:'Bak fremre ledd',lang:'Utnytte rom bak fremre ledd'},
+    {id:'foran-fremre',navn:'Foran fremre ledd',lang:'Utnytte rom foran fremre ledd'}],
+  forsvar:[
+    {id:'foran-fremre',navn:'Foran fremre ledd',lang:'Stenge sentrum foran fremre ledd'},
+    {id:'bak-fremre',navn:'Bak fremre ledd',lang:'Stenge sentrum bak fremre ledd'},
+    {id:'bak-midtre',navn:'Bak midtre ledd',lang:'Stenge sentrum bak midtre ledd'},
+    {id:'bak-bakre',navn:'Bak bakre ledd',lang:'Stenge sentrum bak bakre ledd'}]
+};
+const INT={
+  angrep:['Forbedre progresjonsalternativ','Være progresjonsalternativ','Forbedre progresjonsbetingelse','Skape progresjon'],
+  forsvar:['Forverre progresjonsalternativ','Hindre progresjonsalternativ','Forverre progresjonsbetingelse','Hindre progresjon']
+};
+const AKSJONER={
+  angrep:{
+    rom:[{gruppe:'Med ball',liste:['Motta ball','Føre','Drible','Passe','Innlegg']},
+         {gruppe:'Uten ball',liste:['Be om ballen','Skape rom']}],
+    sjanse:[{gruppe:'Med ball',liste:['Avslutte']}]},
+  forsvar:{
+    rom:[{gruppe:'Uten ball',liste:['Presse','Utfordre','Markere','Sikre']},
+         {gruppe:'Med ball',liste:['Avskjære','Takle','Blokkere']}],
+    sjanse:[{gruppe:'Med ball',liste:['Blokkere','Takle','Redde','Klarere']}]}
+};
+const flat=grupper=>grupper.flatMap(g=>g.liste);
+const aksjonerFor=(f,sjanse)=>flat(AKSJONER[f][sjanse?'sjanse':'rom']);
+const alleAksjonerFase=f=>[...new Set([...aksjonerFor(f,false),...aksjonerFor(f,true)])];
+const PTRH=[{k:'p',n:'Posisjon'},{k:'t',n:'Tidspunkt'},{k:'r',n:'Retning'},{k:'h',n:'Hastighet'}];
+const VARIANTER=['Ideell','Positiv','Nøytral'];
+const HURTIG={angrep:['Bredde','Dybde'],forsvar:['Falle av','Skyve ut']};
+const DEF={
+  'Motta ball':'Ta imot ballen fra en medspiller og få kontroll på den.',
+  'Føre':'Frakte med seg ballen, uten å gå direkte inn i en duell med en motspiller.',
+  'Drible':'Utfordre en motspiller med ballen for å komme forbi ham eller skape rom.',
+  'Passe':'Spille ballen til en medspiller.',
+  'Innlegg':'Spille ballen fra kanten inn i feltet, mot et rom heller enn til en bestemt medspiller.',
+  'Be om ballen':'Gjøre seg spillbar for ballfører med verbal eller non-verbal kommunikasjon.',
+  'Skape rom':'Flytte seg uten ball for å dra med seg motspiller(e), slik at ballfører får mer rom og tid. Ta ut bredde og dybde er måter å skape rom på (hurtigvalg under Beslutte hvordan).',
+  'Avslutte':'Forsøke å score, med fot, hode eller annen lovlig kroppsdel.',
+  'Presse':'Nærme seg ballfører for å redusere rom og tid og styre retningen, uten nødvendigvis å gå inn i duellen.',
+  'Utfordre':'Gå inn i en en-mot-en mot ballfører for å vinne ballen eller hindre ham i å komme forbi. Omfatter kroppskontakt for å forstyrre ballfører uten å gå inn med foten.',
+  'Markere':'Holde seg nær en motspiller uten ball for å hindre at han blir spilt eller kan bruke ballen når han får den.',
+  'Sikre':'Dekke rommet bak eller ved siden av medspilleren som presser eller utfordrer, slik at laget ikke blir spilt gjennom. Falle av og skyve ut beskriver hvordan (hurtigvalg under Beslutte hvordan).',
+  'Avskjære':'Bryte en pasning eller et innlegg ved å komme inn i ballbanen og ta ballen.',
+  'Takle':'Gå inn med foten for å vinne ballen fra ballfører eller sparke den bort.',
+  'Blokkere':'Sette kroppen i ballbanen for å stoppe en pasning, et innlegg eller et skudd.',
+  'Redde':'Keeperen stopper et skudd eller en heading med hendene eller kroppen. Utfallet logges med + eller −.',
+  'Klarere':'Få ballen bort fra et farlig område, uten at målet er å finne en medspiller.'
+};
+const HURTIGDEF={
+  'Bredde':'Han tar posisjon ut mot sidelinjen for å strekke motstanderens ledd i bredden. Det gir mer rom mellom motspillerne, slik at ballfører eller en medspiller får mer rom og tid. Velg Bredde når bredden er måten han skaper rom eller blir spillbar på.',
+  'Dybde':'Han tar posisjon mot eller bak motstanderens bakre ledd for å strekke leddene i lengderetningen. Det gir mer rom mellom leddene og forbedrer progresjonsbetingelsen for ballfører. Velg Dybde når dybden er måten han skaper rom eller blir spillbar på.',
+  'Falle av':'Han trekker seg bakover for å dekke rommet bak seg eller bak eget ledd, slik at motstanderen ikke kan spille gjennom.',
+  'Skyve ut':'Han går fremover, ofte sammen med leddet, for å redusere rommet mellom egne ledd og foran seg.'
+};
+const KROPPSDEL=['Fot','Hode','Kropp','Annet'];
+const JDN=['Ja','Delvis','Nei'];
+const NIVA=['Ikke god nok','Bredde','Starter','Eliteserie-profil','Internasjonal profil'];
+const SIKKERHET={
+  '1':['Gjetning','Så bare deler av situasjonen, eller hadde dårlig sikt. Både intensjonen og varianten er antakelser.'],
+  '2':['Usikker','Så aksjonen, men ikke alternativene han hadde. Intensjonen er en tolkning, og varianten er usikker.'],
+  '3':['Rimelig sikker','Så aksjonen og de viktigste alternativene. Intensjonen er tydelig, men flere varianter kan forklare valget.'],
+  '4':['Sikker','Så hele situasjonen og alternativene. Både intensjonen og valget av variant er tydelige.'],
+  '5':['Svært sikker','Som 4, og han viser samme intensjon og variant i lignende situasjoner i kampen.']
+};
+const NOKKEL='livescouting:utkast:v1';
+
+/* ---------- Tilstand ---------- */
+const nyId=()=>(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));
+const tomState=()=>({id:nyId(),oppdatert:0,teller:0,fane:'kamp',fase:'angrep',sone:{angrep:'',forsvar:''},
+  klokke:{periode:0,startTs:null,justering:0},meta:{},aksjoner:[],lagnotat:{},apen:null,filter:'alle',
+  sum:{niva:'',sterkest:'',svakest:'',neste:'',kondisjon:''}});
+let S=tomState();
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chips=(liste,valgt,attr)=>liste.map(v=>`<button type="button" class="chip" ${attr} data-v="${esc(v)}" aria-pressed="${valgt===v}">${esc(v)}</button>`).join('');
+const $=id=>document.getElementById(id);
+
+function kontekst(f,sone){
+  if(sone==='sjanse')return{oppgave:OPPGAVER[f].sjanse.id,rom:''};
+  if(sone)return{oppgave:OPPGAVER[f].rom.id,rom:sone};
+  return{oppgave:'',rom:''};
+}
+function stedNavn(a){
+  const o=OPPGAVER[a.fase];
+  if(a.oppgave===o.sjanse.id)return o.sjanse.navn;
+  if(a.rom)return ROM[a.fase].find(r=>r.id===a.rom).lang;
+  return 'Uten lagsintensjon';
+}
+const klokkeslett=ts=>ts?new Date(ts).toLocaleTimeString('no-NO',{hour:'2-digit',minute:'2-digit'}):'';
+const tid=a=>a.min?a.min+"'":(a.ts?'kl. '+klokkeslett(a.ts):'');
+// Tidspunkt for +/−: kampminutt når kampen er i gang, ellers klokkeslett
+function tidNa(){
+  const k=S.klokke,m=minutt();
+  if(m)return{min:m,periode:k.periode,ts:Date.now()};
+  if((k.periode==='pause'||k.periode==='slutt')&&k.sluttMin)return{min:k.sluttMin,periode:k.periode,ts:Date.now()};
+  return{min:'',periode:k.periode,ts:Date.now()};
+}
+const kortNavn=a=>`A${a.id} ${tid(a)?tid(a)+' ':''}${a.type}`;
+const pm=a=>a.oppnadd==='Ja'?'+':a.oppnadd==='Nei'?'−':a.oppnadd==='Delvis'?'±':'';
+function utfylt(a){
+  const sjanse=a.oppgave===OPPGAVER[a.fase].sjanse.id;
+  return !!((sjanse||a.intensjon)&&a.variant&&a.oppnadd&&a.sikkerhet);
+}
+
+/* ---------- Klokke ---------- */
+function minutt(){
+  const k=S.klokke;
+  if(k.periode!==1&&k.periode!==2)return null;
+  const base=k.periode===1?0:45;
+  return Math.max(1,base+Math.floor((Date.now()-k.startTs)/60000)+1+k.justering);
+}
+function klokkeTekst(){
+  const k=S.klokke,m=minutt();
+  $('min').textContent=m?m+"'":k.periode==='pause'?'Pause':k.periode==='slutt'?'Slutt':'–';
+  const ik=$('ingenklokke');if(ik)ik.classList.toggle('skjult',!!m);
+  $('klokkeknapp').textContent={0:'Start 1. omg',1:'Pause',pause:'Start 2. omg',2:'Slutt',slutt:'Ferdig'}[k.periode];
+}
+setInterval(klokkeTekst,5000);
+
+/* ---------- Live ---------- */
+function soneSVG(f){
+  const angrep=f==='angrep', retningHoyre=angrep;
+  const x=angrep?{fremre:190,midtre:290,bakre:390}:{fremre:290,midtre:190,bakre:90};
+  const gr=angrep?[6,x.fremre,x.midtre,x.bakre,474]:[6,x.bakre,x.midtre,x.fremre,474];
+  const rek=[...ROM[f]].reverse(), valgt=S.sone[f];
+  const soner=rek.map((r,i)=>{const x0=gr[i],w=gr[i+1]-x0,ord=r.navn.split(' ');
+    return `<g class="sone" tabindex="0" role="button" aria-label="${r.lang}" data-sone="${r.id}" aria-pressed="${valgt===r.id}">
+      <rect x="${x0}" y="6" width="${w}" height="118" rx="3"/>
+      <text transform="translate(${x0+w/2+9} 65) rotate(90)" text-anchor="middle">${ord.slice(0,2).join(' ')}</text>
+      <text transform="translate(${x0+w/2-11} 65) rotate(90)" text-anchor="middle">${ord.slice(2).join(' ')}</text></g>`}).join('');
+  const ledd=(xx,ys)=>`<line x1="${xx}" x2="${xx}" y1="6" y2="124"/>`+ys.map(y=>`<circle cx="${xx}" cy="${y}" r="6"/>`).join('');
+  const ys4=[29,52,78,101],ys2=[52,78];
+  return `<svg viewBox="0 0 480 130" role="group" aria-label="${angrep?'Lagsintensjon: utnytte rom':'Lagsintensjon: stenge sentrum'}">${soner}
+    <g class="ledd" aria-hidden="true">${ledd(x.bakre,ys4)}${ledd(x.midtre,ys4)}${ledd(x.fremre,ys2)}</g></svg>`;
+}
+function renderLive(){
+  const f=S.fase;
+  document.querySelectorAll('[data-livefase]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.livefase===f));
+  const sj=OPPGAVER[f].sjanse;
+  $('sonevalg').innerHTML=soneSVG(f)+`<button class="sjanse" data-sone="sjanse" aria-pressed="${S.sone[f]==='sjanse'}">${sj.navn}</button>`;
+  $('ingensone').classList.toggle('skjult',!!S.sone[f]);
+  $('aksjongrid').innerHTML=AKSJONER[f][S.sone[f]==='sjanse'?'sjanse':'rom'].map(g=>`<div class="gruppelbl">${g.gruppe}</div>`+g.liste.map(a=>`<div class="tile"><button type="button" class="navn" data-def="${esc(a)}" aria-label="Hva betyr ${a}?">${a} <span class="i" aria-hidden="true">ⓘ</span></button>
+    <button class="minus" data-logg="${esc(a)}" data-u="Nei" aria-label="${a}, ikke oppnådd">−</button>
+    <button class="pluss" data-logg="${esc(a)}" data-u="Ja" aria-label="${a}, oppnådd">+</button></div>`).join('')).join('');
+  markerSiste();
+  klokkeTekst();
+}
+function renderFeed(){
+  const n=S.aksjoner.length, a=S.aksjoner[n-1];
+  $('siste').innerHTML=a?`${pm(a)} ${esc(kortNavn(a))} <small>${esc(stedNavn(a))}${a.kobling?' · koblet til A'+a.kobling:''}</small>`:'Ingen aksjoner logget';
+  $('koble').disabled=n<2; $('angre').disabled=!n;
+  $('koble').setAttribute('aria-pressed',!!(a&&a.kobling));
+}
+function markerSiste(){
+  document.querySelectorAll('.tile.sist,.tile button.sist').forEach(e=>e.classList.remove('sist'));
+  const k=S.sisteKnapp, a=S.aksjoner[S.aksjoner.length-1];
+  if(!k||!a||a.id!==k.id||k.fase!==S.fase)return;
+  const b=[...document.querySelectorAll('[data-logg]')].find(x=>x.dataset.logg===k.type&&x.dataset.u===k.utfall);
+  if(b){b.classList.add('sist');b.closest('.tile').classList.add('sist');b.setAttribute('aria-current','true')}
+}
+function logg(type,utfall,knapp){
+  const f=S.fase,k=kontekst(f,S.sone[f]);
+  S.teller++;
+  S.aksjoner.push({id:S.teller,fase:f,oppgave:k.oppgave,rom:k.rom,type,oppnadd:utfall,...tidNa()});
+  if(navigator.vibrate)navigator.vibrate(utfall==='Ja'?30:[20,40,20]);
+  S.sisteKnapp={fase:f,type,utfall,id:S.teller};
+  markerSiste();
+  renderFeed();lagre();
+}
+
+/* ---------- Utfylling ---------- */
+function grupper(){
+  const g={};
+  S.aksjoner.forEach(a=>{const key=[a.fase,a.oppgave||'-',a.rom||'-'].join('|');(g[key]=g[key]||[]).push(a)});
+  const rek=[];
+  ['angrep','forsvar'].forEach(f=>{
+    const o=OPPGAVER[f];
+    ROM[f].forEach(r=>rek.push([f,o.rom.id,r.id].join('|')));
+    rek.push([f,o.sjanse.id,'-'].join('|'));
+    rek.push([f,'-','-'].join('|'));
+  });
+  return rek.filter(k=>g[k]).map(k=>({key:k,aksjoner:g[k]}));
+}
+function renderUtfylling(){
+  const total=S.aksjoner.length, igjen=S.aksjoner.filter(a=>!utfylt(a)).length;
+  $('filter').innerHTML=`<button class="chip" data-filter="alle" aria-pressed="${S.filter==='alle'}">Alle (${total})</button>
+    <button class="chip" data-filter="igjen" aria-pressed="${S.filter==='igjen'}">Ikke utfylt (${igjen})</button>`;
+  const gr=grupper();
+  if(!gr.length){$('liste').innerHTML='<p class="tom">Ingen aksjoner logget ennå. Logg i Live, eller legg til manuelt.</p>';}
+  else $('liste').innerHTML=gr.map(({key,aksjoner})=>{
+    const [f]=key.split('|'), a0=aksjoner[0];
+    const vis=aksjoner.filter(a=>S.filter==='alle'||!utfylt(a));
+    if(!vis.length)return '';
+    const harRom=!!a0.rom;
+    return `<div class="gruppe"><h3><span class="ff">${f==='angrep'?'Angrep':'Forsvar'}</span> › ${a0.oppgave?esc(OPPGAVER[f].rom.id===a0.oppgave?OPPGAVER[f].rom.navn+' › ':''):''}${esc(stedNavn(a0))}</h3>
+      ${harRom?`<label class="f" style="margin-bottom:8px">${f==='angrep'?'Hvordan søker laget å utnytte rommet?':'Hvordan stenger laget sentrum?'}<textarea data-lagnotat="${key}" style="min-height:44px">${esc(S.lagnotat[key])}</textarea></label>`:''}
+      ${vis.map(radAkt).join('')}</div>`}).join('');
+  $('manuell').innerHTML=['angrep','forsvar'].map(f=>alleAksjonerFase(f).map(a=>`<button class="chip" data-manuell="${f}" data-v="${esc(a)}">${f==='angrep'?'A':'F'}: ${esc(a)}</button>`).join('')).join('');
+}
+function radAkt(a){
+  const apen=S.apen===a.id;
+  return `<div class="rad-akt" data-id="${a.id}">
+    <button class="hode" data-apne="${a.id}" aria-expanded="${apen}">
+      <span class="id">A${a.id}</span><span class="t">${tid(a)?esc(tid(a))+' ':''}${esc(a.type)}</span>
+      <span class="pm" aria-label="Oppnådd: ${a.oppnadd||'ikke satt'}">${pm(a)}</span>
+      <span class="st">${utfylt(a)?'✓ Utfylt':'Ikke utfylt'}</span></button>
+    ${apen?detalj(a):''}</div>`;
+}
+const ptrh=(a,pre,hint)=>`<div class="ptrh">${PTRH.map(p=>`<label class="f">${p.n}<textarea data-a="${pre}${p.k}" placeholder="${hint}">${esc(a[pre+p.k])}</textarea></label>`).join('')}</div>`;
+function detalj(a){
+  const f=a.fase,o=OPPGAVER[f],sjanse=a.oppgave===o.sjanse.id;
+  const soneOpts=`<option value="">Uten lagsintensjon</option>`+ROM[f].map(r=>`<option value="${r.id}" ${a.rom===r.id?'selected':''}>${r.lang}</option>`).join('')+`<option value="sjanse" ${sjanse?'selected':''}>${o.sjanse.navn}</option>`;
+  const andre=S.aksjoner.filter(x=>x!==a).map(x=>`<option value="${x.id}" ${String(a.kobling)===String(x.id)?'selected':''}>${esc(kortNavn(x))}, ${esc(stedNavn(x))}</option>`).join('');
+  const sik=a.sikkerhet&&SIKKERHET[a.sikkerhet];
+  return `<div class="detalj">
+    <div class="steg"><div class="grid" style="margin-top:6px">
+      <label class="f">Lagsintensjon<select data-sone-endre>${soneOpts}</select></label>
+      <label class="f">Minutt${a.ts?` <span style="font-weight:400">(logget kl. ${klokkeslett(a.ts)})</span>`:''}<input type="number" min="0" max="130" data-a="min" value="${esc(a.min)}"></label>
+      <label class="f">Henger sammen med<select data-a="kobling"><option value="">Ingen</option>${andre}</select></label>
+    </div>
+    <p class="q" style="margin-top:8px">Fotballaksjon</p><div class="chips">${chips(aksjonerFor(f,sjanse).includes(a.type)?aksjonerFor(f,sjanse):[...aksjonerFor(f,sjanse),a.type],a.type,'data-a="type"')}</div>${DEF[a.type]?`<p class="def-utf"><b>${esc(a.type)}:</b> ${DEF[a.type]}</p>`:''}</div>
+    <div class="steg"><h4><span class="nr">1</span>Kommunisere</h4>
+      <p class="q">Hvordan kommuniserer han med med- og motspillere?</p><textarea data-a="kommunisere">${esc(a.kommunisere)}</textarea></div>
+    <div class="steg"><h4><span class="nr">2</span>Beslutte hva</h4>
+      ${sjanse?`<p class="q">Individuell intensjon: <b>${o.sjanse.implisitt}</b> (${o.sjanse.forklaring})</p>`
+        :`<p class="q">Individuell intensjon</p><div class="chips">${chips(INT[f],a.intensjon,'data-a="intensjon"')}</div>`}
+      <textarea data-a="hva" placeholder="Hva bidrar han med, og hvorfor?">${esc(a.hva)}</textarea>
+      <div class="vurd">
+        <p class="q"><b>Oppnådd individuell intensjon</b></p>
+        <div class="chips">${chips(JDN,a.oppnadd,'data-a="oppnadd"')}</div>
+        <p class="fotnote">Vurder det spilleren selv har ansvar for, også når laget ikke oppnår lagsintensjonen. Hvor sikker du er på lesingen av intensjonen, angir du under Beslutte hvordan.</p>
+      </div></div>
+    <div class="steg"><h4><span class="nr">3</span>Beslutte hvordan</h4>
+      <p class="q">Variant</p><div class="chips">${chips(VARIANTER,a.variant,'data-a="variant"')}</div>
+      <p class="q">Hurtigvalg</p><div class="chips">${chips(HURTIG[f],a.hurtig,'data-a="hurtig"')}</div>
+      ${a.hurtig?`<p class="def-utf"><b>${esc(a.hurtig)}:</b> ${HURTIGDEF[a.hurtig]}</p>`:''}
+      <details class="hjelp"><summary>Hvordan bruker jeg hurtigvalgene?</summary>
+        <p class="q">Hurtigvalgene beskriver hvordan, ikke hva. De er ikke egne fotballaksjoner, men en snarvei for Posisjon og Retning blant spilleforståelsesprinsippene. De kan brukes sammen med alle aksjoner der de passer, for eksempel Skape rom, Be om ballen eller Motta ball${f==='forsvar'?', eller Sikre, Markere og Presse':''}. Passer ingen av dem, lar du feltet stå tomt og beskriver posisjonen under Posisjon.</p>
+        <dl>${HURTIG[f].map(h=>`<dt>${h}</dt><dd>${HURTIGDEF[h]}</dd>`).join('')}</dl></details>
+      ${a.variant?ptrh(a,'sf','Hva planla han?'):''}
+      <div class="vurd">
+        <div class="rad"><button type="button" class="lbl infoknapp" data-sikinfo aria-label="Hva betyr sikkerhet?">Sikkerhet <span class="i" aria-hidden="true">ⓘ</span></button><div class="chips">${chips(Object.keys(SIKKERHET),a.sikkerhet,'data-a="sikkerhet"')}</div></div>
+        ${sik?`<p class="def-utf"><b>${a.sikkerhet}: ${sik[0]}.</b> ${sik[1]}</p>`:''}
+      </div></div>
+    <div class="steg"><h4><span class="nr">4</span>Utføre beslutning</h4>
+      <p class="q">Gjennomførte han det han valgte? Skill dårlig beslutning fra dårlig utførelse.</p>
+      <div class="chips">${chips(JDN,a.utfort,'data-a="utfort"')}</div>
+      <p class="q">Kroppsdel</p><div class="chips">${chips(KROPPSDEL,a.kroppsdel,'data-a="kroppsdel"')}</div>
+      ${ptrh(a,'tk','Hva gjorde han?')}
+      <div class="knapper" style="margin:6px 0 4px"><button class="knapp sek" data-slett="${a.id}">Slett aksjon</button><button class="knapp" data-apne="${a.id}">Lukk</button></div></div>
+  </div>`;
+}
+
+/* ---------- Rapport ---------- */
+function renderRapport(){
+  const rader=grupper().map(({key,aksjoner})=>{const a0=aksjoner[0];
+    const c=v=>aksjoner.filter(a=>a.oppnadd===v).length;
+    return `<tr><td>${a0.fase==='angrep'?'Angrep':'Forsvar'}: ${esc(stedNavn(a0))}</td><td class="n">${aksjoner.length}</td><td class="n">${c('Ja')}</td><td class="n">${c('Delvis')}</td><td class="n">${c('Nei')}</td></tr>`}).join('');
+  $('stat').innerHTML=rader?`<table class="stat"><thead><tr><th>Lagsintensjon</th><th>Antall</th><th>+</th><th>±</th><th>−</th></tr></thead><tbody>${rader}</tbody></table>`:'<p class="tom">Ingen aksjoner logget ennå.</p>';
+  $('sumniva').innerHTML=chips(NIVA,S.sum.niva,'data-sumniva');
+  const opts='<option value="">Velg</option>'+['angrep','forsvar'].map(f=>`<optgroup label="${f==='angrep'?'Angrep':'Forsvar'}">${INT[f].map(i=>`<option>${i}</option>`).join('')}</optgroup>`).join('');
+  document.querySelectorAll('[data-sumsel]').forEach(s=>{s.innerHTML=opts;s.value=S.sum[s.dataset.sumsel]||''});
+  document.querySelectorAll('[data-sumtxt]').forEach(t=>t.value=S.sum[t.dataset.sumtxt]||'');
+  $('fk').classList.toggle('skjult',!['In-depth','Live'].includes(S.meta.type));
+}
+
+/* ---------- Ramme ---------- */
+let wakeLock=null;
+async function hold(på){try{if(på&&'wakeLock' in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>wakeLock=null)}else if(!på&&wakeLock){await wakeLock.release();wakeLock=null}}catch(e){}}
+function render(){
+  document.querySelectorAll('[data-fane]').forEach(b=>b.setAttribute('aria-selected',b.dataset.fane===S.fane));
+  document.querySelectorAll('[data-vis]').forEach(v=>v.classList.toggle('skjult',v.dataset.vis!==S.fane));
+  $('feed').classList.toggle('skjult',S.fane!=='live');
+  hold(S.fane==='live');
+  if(S.fane==='live'){renderLive();renderFeed()}
+  if(S.fane==='utfylling')renderUtfylling();
+  if(S.fane==='rapport')renderRapport();
+  if(S.fane==='kamp')document.querySelectorAll('[data-meta]').forEach(m=>m.value=S.meta[m.dataset.meta]||'');
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.fane==='live'){hold(true);klokkeTekst()}});
+
+/* ---------- Lagring ---------- */
+// Alt som lagres går gjennom lagreNa() og hent(). Trinn 2 (innlogging og synkronisering) kobles på her.
+// Utkastet skrives både til IndexedDB og localStorage. localStorage skrives synkront, så siste trykk
+// overlever også når telefonen lukker appen brått.
+const DB='livescouting',BUTIKK='utkast';
+let dbp;
+const db=()=>dbp||(dbp=new Promise((ok,feil)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(BUTIKK);r.onsuccess=()=>ok(r.result);r.onerror=()=>feil(r.error)}));
+async function idbSett(v){const d=await db();return new Promise((ok,feil)=>{const t=d.transaction(BUTIKK,'readwrite');t.objectStore(BUTIKK).put(v,NOKKEL);t.oncomplete=()=>ok();t.onerror=()=>feil(t.error)})}
+async function idbHent(){const d=await db();return new Promise((ok,feil)=>{const r=d.transaction(BUTIKK).objectStore(BUTIKK).get(NOKKEL);r.onsuccess=()=>ok(r.result);r.onerror=()=>feil(r.error)})}
+let lt;
+function lagreNa(){
+  clearTimeout(lt);lt=null;S.oppdatert=Date.now();
+  const j=JSON.stringify(S);let lokalt=false;
+  try{localStorage.setItem(NOKKEL,j);lokalt=true}catch(e){}
+  idbSett(j).catch(()=>{if(!lokalt)vis('Ikke lagret. Kopier notatene før du lukker.')});
+}
+function lagre(){clearTimeout(lt);lt=setTimeout(lagreNa,400)}
+async function hent(){
+  const kilder=[];
+  try{kilder.push(localStorage.getItem(NOKKEL))}catch(e){}
+  try{kilder.push(await idbHent())}catch(e){}
+  let best=null;
+  kilder.forEach(j=>{try{const o=j&&JSON.parse(j);if(o&&(!best||(o.oppdatert||0)>(best.oppdatert||0)))best=o}catch(e){}});
+  if(best)S=Object.assign(tomState(),best);
+}
+const lagreVedLukking=()=>{if(lt)lagreNa()};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')lagreVedLukking()});
+window.addEventListener('pagehide',lagreVedLukking);
+function vis(m){const s=$('status');if(!s)return;s.textContent=m;clearTimeout(vis.t);vis.t=setTimeout(()=>s.textContent='',2500)}
+
+/* ---------- Hendelser ---------- */
+const finnA=id=>S.aksjoner.find(a=>String(a.id)===String(id));
+document.addEventListener('click',e=>{
+  const t=e.target;
+  const fane=t.closest('[data-fane]')||t.closest('[data-ga]');
+  if(fane){S.fane=fane.dataset.fane||fane.dataset.ga;render();lagre();window.scrollTo(0,0);return}
+  const lf=t.closest('[data-livefase]');if(lf){S.fase=lf.dataset.livefase;renderLive();lagre();return}
+  const so=t.closest('[data-sone]');
+  if(so){const f=S.fase;S.sone[f]=S.sone[f]===so.dataset.sone?'':so.dataset.sone;renderLive();lagre();return}
+  if(t.closest('[data-sikinfo]')){$('deftittel').textContent='Sikkerhet';
+    $('deftekst').innerHTML='<p>Hvor sikker du er på at du har lest hele beslutningen riktig: både hva han ville (individuell intensjon) og hvordan han valgte å gjøre det (variant).</p><dl class="sikliste">'+Object.entries(SIKKERHET).map(([k,[n,d]])=>`<dt>${k}: ${n}</dt><dd>${d}</dd>`).join('')+'</dl>';
+    $('defark').classList.remove('skjult');$('deflukk').focus();return}
+  const df=t.closest('[data-def]');
+  if(df){$('deftittel').textContent=df.dataset.def;$('deftekst').innerHTML='<p>'+esc(DEF[df.dataset.def]||'Ingen definisjon ennå.')+'</p>';$('defark').classList.remove('skjult');$('deflukk').focus();return}
+  if(t.closest('#deflukk')||(!t.closest('#defark')&&!$('defark').classList.contains('skjult'))){$('defark').classList.add('skjult');if(!t.closest('[data-logg]'))return}
+  const lg=t.closest('[data-logg]');if(lg){logg(lg.dataset.logg,lg.dataset.u,lg);return}
+  const kl=t.closest('[data-klokke]');
+  if(kl){const k=S.klokke,v=kl.dataset.klokke;
+    if(v==='pluss')k.justering++;
+    else if(v==='minus')k.justering--;
+    else{const neste={0:1,1:'pause',pause:2,2:'slutt',slutt:'slutt'}[k.periode];
+      if(neste==='pause'||neste==='slutt'){const m=minutt();if(m)k.sluttMin=m}
+      if(neste===1||neste===2){k.startTs=Date.now();k.justering=0}
+      k.periode=neste}
+    klokkeTekst();lagre();return}
+  if(t.closest('#angre')){const a=S.aksjoner.pop();if(a){S.aksjoner.forEach(x=>{if(String(x.kobling)===String(a.id))x.kobling=''});const f=S.aksjoner[S.aksjoner.length-1];S.sisteKnapp=f?{fase:f.fase,type:f.type,utfall:f.oppnadd,id:f.id}:null;markerSiste();renderFeed();lagre()}return}
+  if(t.closest('#koble')){const n=S.aksjoner.length;if(n>1){const a=S.aksjoner[n-1];a.kobling=a.kobling?'':S.aksjoner[n-2].id;renderFeed();lagre()}return}
+  const fl=t.closest('[data-filter]');if(fl){S.filter=fl.dataset.filter;renderUtfylling();lagre();return}
+  const ap=t.closest('[data-apne]');
+  if(ap){const id=+ap.dataset.apne;S.apen=S.apen===id?null:id;renderUtfylling();lagre();
+    document.querySelector(`.rad-akt[data-id="${id}"]`)?.scrollIntoView({block:'nearest'});return}
+  const sl=t.closest('[data-slett]');
+  if(sl){if(confirm('Slette denne aksjonen?')){const id=sl.dataset.slett;S.aksjoner=S.aksjoner.filter(a=>String(a.id)!==id);
+    S.aksjoner.forEach(x=>{if(String(x.kobling)===id)x.kobling=''});renderUtfylling();lagre()}return}
+  const mn=t.closest('[data-manuell]');
+  if(mn){S.teller++;S.aksjoner.push({id:S.teller,fase:mn.dataset.manuell,oppgave:'',rom:'',type:mn.dataset.v,min:'',manuell:true});S.apen=S.teller;S.filter='alle';renderUtfylling();lagre();return}
+  const c=t.closest('.chip');
+  if(c){
+    if(c.hasAttribute('data-sumniva')){S.sum.niva=S.sum.niva===c.dataset.v?'':c.dataset.v;renderRapport();lagre();return}
+    const rad=c.closest('.rad-akt');if(!rad||!c.dataset.a)return;
+    const a=finnA(rad.dataset.id),fe=c.dataset.a;
+    if(fe==='type')a.type=c.dataset.v;else a[fe]=a[fe]===c.dataset.v?'':c.dataset.v;
+    // Manuelt lagt til: tid bare hvis kampklokken går nå, ellers står aksjonen uten tid
+    if(fe==='oppnadd'&&a.oppnadd&&!a.min&&!a.ts&&a.manuell&&minutt())Object.assign(a,tidNa());
+    renderUtfylling();lagre();
+  }
+});
+document.addEventListener('keydown',e=>{const r=e.target.closest('g[data-sone]');if(r&&(e.key==='Enter'||e.key===' ')){e.preventDefault();r.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
+document.addEventListener('input',e=>{
+  const el=e.target;
+  if(el.dataset.meta)S.meta[el.dataset.meta]=el.value;
+  else if(el.dataset.lagnotat)S.lagnotat[el.dataset.lagnotat]=el.value;
+  else if(el.dataset.sumsel)S.sum[el.dataset.sumsel]=el.value;
+  else if(el.dataset.sumtxt)S.sum[el.dataset.sumtxt]=el.value;
+  else if(el.hasAttribute('data-sone-endre')){const a=finnA(el.closest('.rad-akt').dataset.id),k=kontekst(a.fase,el.value);a.oppgave=k.oppgave;a.rom=k.rom;renderUtfylling()}
+  else if(el.dataset.a){const a=finnA(el.closest('.rad-akt').dataset.id);a[el.dataset.a]=el.value;
+    if(el.tagName==='SELECT'||el.type==='number'){/* oppdater hode ved neste visning */}}
+  else return;
+  lagre();
+});
+document.addEventListener('change',e=>{
+  if(e.target.matches('select')&&!e.target.hasAttribute('data-sone-endre'))e.target.dispatchEvent(new Event('input',{bubbles:true}));
+  if(e.target.matches('.rad-akt input[type=number]'))renderUtfylling();
+});
+
+/* ---------- Eksport ---------- */
+function tekst(){
+  const m=S.meta,L=[];
+  const pt=(a,pre)=>PTRH.filter(p=>a[pre+p.k]).map(p=>`${p.n}: ${a[pre+p.k]}`).join('; ');
+  L.push(`LIVE SCOUTING: ${m.spiller||'Spiller'} (${m.posisjon||'posisjon'}, ${m.klubb||'klubb'})`);
+  L.push(`${m.kamp||''} ${m.dato||''} | ${m.type||''} | Scout: ${m.scout||''}`,'');
+  grupper().forEach(({key,aksjoner})=>{
+    const a0=aksjoner[0],o=OPPGAVER[a0.fase];
+    L.push(`${a0.fase==='angrep'?'ANGREP':'FORSVAR'} > ${a0.oppgave===o.rom.id?o.rom.navn+' > ':''}${stedNavn(a0)}`);
+    if(S.lagnotat[key])L.push(`  Lagsintensjon: ${S.lagnotat[key]}`);
+    aksjoner.forEach(a=>{
+      const sj=a.oppgave===o.sjanse.id;
+      L.push(`  ${pm(a)} ${kortNavn(a)}`);
+      if(a.kobling){const x=finnA(a.kobling);if(x)L.push(`    Henger sammen med: ${kortNavn(x)}`)}
+      if(a.kommunisere)L.push(`    Kommunisere: ${a.kommunisere}`);
+      const i=sj?o.sjanse.implisitt:a.intensjon;
+      if(i||a.hva)L.push(`    Beslutte hva: ${[i,a.hva].filter(Boolean).join('. ')}`);
+      L.push(`    Oppnådd individuell intensjon: ${a.oppnadd||'-'}`);
+      if(a.variant||a.hurtig||pt(a,'sf')||a.sikkerhet)L.push(`    Beslutte hvordan: ${[a.variant,a.hurtig,pt(a,'sf'),a.sikkerhet?'Sikkerhet '+a.sikkerhet+' ('+SIKKERHET[a.sikkerhet][0].toLowerCase()+')':''].filter(Boolean).join('. ')}`);
+      if(a.utfort||a.kroppsdel||pt(a,'tk'))L.push(`    Utføre beslutning: ${[a.utfort,a.kroppsdel,pt(a,'tk')].filter(Boolean).join('. ')}`);
+    });
+    L.push('');
+  });
+  L.push('OPPSUMMERING',`Samlet nivå: ${S.sum.niva||'-'}`,`Sterkest: ${S.sum.sterkest||'-'}`,`Svakest: ${S.sum.svakest||'-'}`);
+  if(S.sum.neste)L.push(`Neste rapport: ${S.sum.neste}`);
+  if(S.sum.kondisjon&&['In-depth','Live'].includes(m.type))L.push(`Fotballkondisjon: ${S.sum.kondisjon}`);
+  return L.join('\n');
+}
+$('kopier').onclick=async()=>{const t=tekst();
+  try{await navigator.clipboard.writeText(t);vis('Notatene er kopiert')}
+  catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');vis('Notatene er kopiert')}catch(_){vis('Kopiering feilet')}a.remove()}};
+$('skriv').onclick=()=>{$('utskrift').textContent=tekst();window.print()};
+$('nytt').onclick=()=>{if(confirm('Tømme skjemaet? Alle aksjoner og notater slettes.')){S=tomState();render();lagre();vis('Nytt skjema')}};
+
+hent().then(render);
+// Be nettleseren om ikke å rydde bort lagrede data, og gjør appen tilgjengelig uten nett
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
