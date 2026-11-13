@@ -1,5 +1,5 @@
 // Gjør appen tilgjengelig uten nett. Øk VERSJON når filene endres, så henter telefonene ny utgave.
-const VERSJON = 'v2';
+const VERSJON = 'v3';
 const CACHE = 'livescouting-' + VERSJON;
 const FILER = ['./', './manifest.webmanifest', './logo.png', './ikon-180.png', './ikon-192.png', './ikon-512.png'];
 

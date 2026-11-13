@@ -40,9 +40,18 @@ h2{font-size:28px;color:var(--accent-text);margin:6px 0 8px}
 
 /* Felter */
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
+.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:14px}
 input[type=text],input[type=date],input[type=number],select,textarea{font:inherit;font-weight:400;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:4px;padding:8px 10px;width:100%}
 textarea{min-height:60px;resize:vertical}
+input[type=text],input[type=date],input[type=number],select{height:43px}
+input[type=date]{-webkit-appearance:none;appearance:none;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+.blokk{border:2px solid var(--line);border-radius:8px;padding:10px 12px;margin:14px 0}
+.blokk>h3{font:700 16px/1.25 Arial,sans-serif;margin:0 0 8px}
+.opprad{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end;margin-bottom:10px}
+.opprad .fra{font-weight:700;font-size:14px;align-self:center}
+.krad{border-top:1.5px dashed var(--line);padding:8px 0 10px}
+.krad textarea{margin:6px 0}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 8px}
 .chip{font-size:14px;font-weight:700;background:var(--field);border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer}
 .chip[aria-pressed=true]{background:var(--red);border-color:var(--red);color:var(--on-red)}
@@ -157,12 +166,13 @@ table.stat td.n{text-align:center;width:60px}
     <div class="grid">
       <label class="f">Spiller<input type="text" data-meta="spiller"></label>
       <label class="f">Klubb<input type="text" data-meta="klubb"></label>
-      <label class="f">Posisjon<select data-meta="posisjon"><option value="">Velg</option><option>Keeper</option><option>Sideback</option><option>Midtstopper</option><option>Defensiv midtbane</option><option>Sentral midtbane</option><option>Indreløper</option><option>Ving</option><option>Spiss</option></select></label>
       <label class="f">Kamp<input type="text" data-meta="kamp" placeholder="Hjemmelag mot bortelag"></label>
       <label class="f">Dato<input type="date" data-meta="dato"></label>
       <label class="f">Rapporttype<select data-meta="type"><option value="">Velg</option><option>Screening</option><option>In-depth</option><option>Live</option></select></label>
       <label class="f">Scout<input type="text" data-meta="scout"></label>
     </div>
+    <div class="blokk"><h3>Formasjon og posisjon i kampen</h3><div id="opp-kamp"></div></div>
+    <label class="f">Hypotese: Hva ønsker vi å få svar på ved å se på denne kampen?<textarea data-meta="hypotese"></textarea></label>
     <div class="knapper"><button class="knapp" data-ga="live">Gå til Live</button></div>
   </section>
 
@@ -190,12 +200,16 @@ table.stat td.n{text-align:center;width:60px}
   <section class="vis" data-vis="utfylling">
     <h2>Utfylling</h2>
     <p class="ingress">Fyll ut i pausen eller etter kampen. Aksjonene er sortert etter lagsoppgave og lagsintensjon. Trykk på en aksjon for å åpne komponentene.</p>
+    <details class="hjelp"><summary>Formasjon og posisjon i kampen</summary><div id="opp-utf" style="margin-top:8px"></div></details>
     <div class="filter" id="filter"></div>
     <div id="liste"></div>
     <details class="hjelp"><summary>Legg til aksjon manuelt</summary>
       <p class="q">Velg fase og aksjon. Lagsintensjon og minutt setter du i kortet.</p>
       <div class="chips" id="manuell"></div>
     </details>
+    <div class="blokk"><h3>Profesjonalitet og karakter</h3>
+      <p class="q" style="margin-bottom:6px">Konstruktiv eller destruktiv atferd du registrerer i kampen.</p>
+      <div id="karakter"></div></div>
   </section>
 
   <!-- RAPPORT -->
@@ -211,7 +225,10 @@ table.stat td.n{text-align:center;width:60px}
         <label class="f">Svakeste individuelle intensjon<select data-sumsel="svakest"></select></label>
       </div>
       <label class="f" style="margin-top:12px">Hva må neste rapport se etter?<textarea data-sumtxt="neste" placeholder="Hvilken intensjon eller hvilket rom fikk du ikke sett nok av?"></textarea></label>
-      <label class="f skjult" id="fk" style="margin-top:12px">Fotballkondisjon<textarea data-sumtxt="kondisjon" placeholder="Flere aksjoner, opprettholder antall aksjoner og kvaliteten på aksjonene gjennom kampen"></textarea></label>
+      <div class="skjult" id="fk" style="margin-top:14px"><p class="q" style="margin-bottom:6px"><b>Fotballkondisjon</b></p>
+        <label class="f">1. Evnen til å gjøre aksjonene så ofte som mulig<textarea data-sumtxt="kondisjon1"></textarea></label>
+        <label class="f" style="margin-top:10px">2. Evnen til å opprettholde frekvensen på aksjonene<textarea data-sumtxt="kondisjon2"></textarea></label>
+        <label class="f" style="margin-top:10px">3. Evnen til å opprettholde kvaliteten på aksjonene så lenge som mulig<textarea data-sumtxt="kondisjon3"></textarea></label></div>
     </div>
     <div class="knapper">
       <button class="knapp" id="kopier">Kopier notater</button>
@@ -228,6 +245,7 @@ table.stat td.n{text-align:center;width:60px}
   <button id="angre">Angre</button>
 </div></div>
 <div class="defark skjult" id="defark" role="dialog" aria-modal="false" aria-labelledby="deftittel"><div class="wrap"><h3 id="deftittel"></h3><div id="deftekst"></div><button class="knapp" id="deflukk">Lukk</button></div></div>
+<datalist id="formasjoner"></datalist>
 <pre id="utskrift"></pre>
 
 <script>
@@ -303,13 +321,17 @@ const SIKKERHET={
   '4':['Sikker','Så hele situasjonen og alternativene. Både intensjonen og valget av variant er tydelige.'],
   '5':['Svært sikker','Som 4, og han viser samme intensjon og variant i lignende situasjoner i kampen.']
 };
+const POSISJONER=['Keeper','Sideback','Midtstopper','Defensiv midtbane','Sentral midtbane','Indreløper','Ving','Spiss'];
+const FORMASJONER=['4-3-3','4-2-3-1','4-4-2','4-1-4-1','3-5-2','3-4-3','5-3-2'];
+const ATFERD=['Konstruktiv','Destruktiv'];
+const NONLIN='Fotballaksjoner er non-lineære. De kommer ikke alltid etter hverandre i en fast rekkefølge, men kan overlappe og påvirke hverandre. Bruk feltet når to aksjoner hører sammen, for eksempel når han ber om ballen og deretter mottar den. Da leses de to aksjonene i sammenheng i rapporten.';
 const NOKKEL='livescouting:utkast:v1';
 
 /* ---------- Tilstand ---------- */
 const nyId=()=>(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));
 const tomState=()=>({id:nyId(),oppdatert:0,teller:0,fane:'kamp',fase:'angrep',sone:{angrep:'',forsvar:''},
-  klokke:{periode:0,startTs:null,justering:0},meta:{},aksjoner:[],lagnotat:{},apen:null,filter:'alle',
-  sum:{niva:'',sterkest:'',svakest:'',neste:'',kondisjon:''}});
+  klokke:{periode:0,startTs:null,justering:0},meta:{},oppstilling:[{min:'',formasjon:'',posisjon:''}],aksjoner:[],lagnotat:{},gruppesum:{},karakter:[],apen:null,filter:'alle',
+  sum:{niva:'',sterkest:'',svakest:'',neste:'',kondisjon1:'',kondisjon2:'',kondisjon3:''}});
 let S=tomState();
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const chips=(liste,valgt,attr)=>liste.map(v=>`<button type="button" class="chip" ${attr} data-v="${esc(v)}" aria-pressed="${valgt===v}">${esc(v)}</button>`).join('');
@@ -408,6 +430,25 @@ function logg(type,utfall,knapp){
   renderFeed();lagre();
 }
 
+/* ---------- Formasjon, posisjon og karakter ---------- */
+function oppstillingHTML(){
+  return S.oppstilling.map((o,i)=>`<div class="opprad" data-opp="${i}">
+    ${i?`<label class="f">Fra minutt<input type="number" min="1" max="130" data-o="min" value="${esc(o.min)}"></label>`:'<span class="fra">Fra start</span>'}
+    <label class="f">Lagets formasjon<input type="text" list="formasjoner" data-o="formasjon" value="${esc(o.formasjon)}" placeholder="4-3-3" autocomplete="off"></label>
+    <label class="f">Spillerens posisjon<select data-o="posisjon"><option value="">Velg</option>${POSISJONER.map(p=>`<option ${o.posisjon===p?'selected':''}>${p}</option>`).join('')}</select></label>
+    ${i?`<button type="button" class="knapp sek" data-oppslett="${i}">Fjern</button>`:''}</div>`).join('')
+    +'<button type="button" class="knapp sek" data-oppny>Legg til endring</button>';
+}
+function karakterHTML(){
+  return S.karakter.map((k,i)=>`<div class="krad" data-kar="${i}">
+    <div class="rad"><label class="f" style="width:90px">Minutt<input type="number" min="0" max="130" data-k="min" value="${esc(k.min)}"></label>
+      <div class="chips" style="margin:0;align-self:flex-end">${ATFERD.map(v=>`<button type="button" class="chip" data-ktype="${v}" aria-pressed="${k.type===v}">${v}</button>`).join('')}</div></div>
+    <textarea data-k="tekst" placeholder="Hva gjorde han, og i hvilken situasjon?">${esc(k.tekst)}</textarea>
+    <button type="button" class="knapp sek" data-karslett="${i}">Fjern</button></div>`).join('')
+    +'<button type="button" class="knapp sek" data-karny>Legg til observasjon</button>';
+}
+$('formasjoner').innerHTML=FORMASJONER.map(f=>`<option value="${f}">`).join('');
+
 /* ---------- Utfylling ---------- */
 function grupper(){
   const g={};
@@ -422,6 +463,7 @@ function grupper(){
   return rek.filter(k=>g[k]).map(k=>({key:k,aksjoner:g[k]}));
 }
 function renderUtfylling(){
+  $('opp-utf').innerHTML=oppstillingHTML();$('karakter').innerHTML=karakterHTML();
   const total=S.aksjoner.length, igjen=S.aksjoner.filter(a=>!utfylt(a)).length;
   $('filter').innerHTML=`<button class="chip" data-filter="alle" aria-pressed="${S.filter==='alle'}">Alle (${total})</button>
     <button class="chip" data-filter="igjen" aria-pressed="${S.filter==='igjen'}">Ikke utfylt (${igjen})</button>`;
@@ -434,7 +476,8 @@ function renderUtfylling(){
     const harRom=!!a0.rom;
     return `<div class="gruppe"><h3><span class="ff">${f==='angrep'?'Angrep':'Forsvar'}</span> › ${a0.oppgave?esc(OPPGAVER[f].rom.id===a0.oppgave?OPPGAVER[f].rom.navn+' › ':''):''}${esc(stedNavn(a0))}</h3>
       ${harRom?`<label class="f" style="margin-bottom:8px">${f==='angrep'?'Hvordan søker laget å utnytte rommet?':'Hvordan stenger laget sentrum?'}<textarea data-lagnotat="${key}" style="min-height:44px">${esc(S.lagnotat[key])}</textarea></label>`:''}
-      ${vis.map(radAkt).join('')}</div>`}).join('');
+      ${vis.map(radAkt).join('')}
+      ${a0.oppgave?`<label class="f" style="margin-top:8px">Oppsummering av aksjonene<textarea data-gruppesum="${key}" style="min-height:44px">${esc(S.gruppesum[key])}</textarea></label>`:''}</div>`}).join('');
   $('manuell').innerHTML=['angrep','forsvar'].map(f=>alleAksjonerFase(f).map(a=>`<button class="chip" data-manuell="${f}" data-v="${esc(a)}">${f==='angrep'?'A':'F'}: ${esc(a)}</button>`).join('')).join('');
 }
 function radAkt(a){
@@ -456,15 +499,15 @@ function detalj(a){
     <div class="steg"><div class="grid" style="margin-top:6px">
       <label class="f">Lagsintensjon<select data-sone-endre>${soneOpts}</select></label>
       <label class="f">Minutt${a.ts?` <span style="font-weight:400">(logget kl. ${klokkeslett(a.ts)})</span>`:''}<input type="number" min="0" max="130" data-a="min" value="${esc(a.min)}"></label>
-      <label class="f">Henger sammen med<select data-a="kobling"><option value="">Ingen</option>${andre}</select></label>
+      <div class="f"><button type="button" class="infoknapp" data-nonlin aria-label="Hva betyr non-lineær aksjon?">Henger sammen med (non-lineær aksjon) <span class="i" aria-hidden="true">ⓘ</span></button><select data-a="kobling" aria-label="Henger sammen med"><option value="">Ingen</option>${andre}</select></div>
     </div>
     <p class="q" style="margin-top:8px">Fotballaksjon</p><div class="chips">${chips(aksjonerFor(f,sjanse).includes(a.type)?aksjonerFor(f,sjanse):[...aksjonerFor(f,sjanse),a.type],a.type,'data-a="type"')}</div>${DEF[a.type]?`<p class="def-utf"><b>${esc(a.type)}:</b> ${DEF[a.type]}</p>`:''}</div>
     <div class="steg"><h4><span class="nr">1</span>Kommunisere</h4>
-      <p class="q">Hvordan kommuniserer han med med- og motspillere?</p><textarea data-a="kommunisere">${esc(a.kommunisere)}</textarea></div>
+      <p class="q">Hvordan kommuniserte han med med- og motspillere?</p><textarea data-a="kommunisere">${esc(a.kommunisere)}</textarea></div>
     <div class="steg"><h4><span class="nr">2</span>Beslutte hva</h4>
       ${sjanse?`<p class="q">Individuell intensjon: <b>${o.sjanse.implisitt}</b> (${o.sjanse.forklaring})</p>`
         :`<p class="q">Individuell intensjon</p><div class="chips">${chips(INT[f],a.intensjon,'data-a="intensjon"')}</div>`}
-      <textarea data-a="hva" placeholder="Hva bidrar han med, og hvorfor?">${esc(a.hva)}</textarea>
+      <label class="f">Kommentar<textarea data-a="hva" placeholder="Hva bidrar han med, og hvorfor?">${esc(a.hva)}</textarea></label>
       <div class="vurd">
         <p class="q"><b>Oppnådd individuell intensjon</b></p>
         <div class="chips">${chips(JDN,a.oppnadd,'data-a="oppnadd"')}</div>
@@ -515,7 +558,7 @@ function render(){
   if(S.fane==='live'){renderLive();renderFeed()}
   if(S.fane==='utfylling')renderUtfylling();
   if(S.fane==='rapport')renderRapport();
-  if(S.fane==='kamp')document.querySelectorAll('[data-meta]').forEach(m=>m.value=S.meta[m.dataset.meta]||'');
+  if(S.fane==='kamp'){document.querySelectorAll('[data-meta]').forEach(m=>m.value=S.meta[m.dataset.meta]||'');$('opp-kamp').innerHTML=oppstillingHTML()}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.fane==='live'){hold(true);klokkeTekst()}});
 
@@ -542,7 +585,11 @@ async function hent(){
   try{kilder.push(await idbHent())}catch(e){}
   let best=null;
   kilder.forEach(j=>{try{const o=j&&JSON.parse(j);if(o&&(!best||(o.oppdatert||0)>(best.oppdatert||0)))best=o}catch(e){}});
-  if(best)S=Object.assign(tomState(),best);
+  if(best){S=Object.assign(tomState(),best);
+    // Utkast fra eldre utgaver
+    if(!Array.isArray(S.oppstilling)||!S.oppstilling.length)S.oppstilling=tomState().oppstilling;
+    if(S.meta.posisjon&&!S.oppstilling[0].posisjon)S.oppstilling[0].posisjon=S.meta.posisjon;
+    if(S.sum.kondisjon&&!S.sum.kondisjon1){S.sum.kondisjon1=S.sum.kondisjon;S.sum.kondisjon=''}}
 }
 const lagreVedLukking=()=>{if(lt)lagreNa()};
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')lagreVedLukking()});
@@ -561,6 +608,7 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-sikinfo]')){$('deftittel').textContent='Sikkerhet';
     $('deftekst').innerHTML='<p>Hvor sikker du er på at du har lest hele beslutningen riktig: både hva han ville (individuell intensjon) og hvordan han valgte å gjøre det (variant).</p><dl class="sikliste">'+Object.entries(SIKKERHET).map(([k,[n,d]])=>`<dt>${k}: ${n}</dt><dd>${d}</dd>`).join('')+'</dl>';
     $('defark').classList.remove('skjult');$('deflukk').focus();return}
+  if(t.closest('[data-nonlin]')){$('deftittel').textContent='Non-lineær aksjon';$('deftekst').innerHTML='<p>'+esc(NONLIN)+'</p>';$('defark').classList.remove('skjult');$('deflukk').focus();return}
   const df=t.closest('[data-def]');
   if(df){$('deftittel').textContent=df.dataset.def;$('deftekst').innerHTML='<p>'+esc(DEF[df.dataset.def]||'Ingen definisjon ennå.')+'</p>';$('defark').classList.remove('skjult');$('deflukk').focus();return}
   if(t.closest('#deflukk')||(!t.closest('#defark')&&!$('defark').classList.contains('skjult'))){$('defark').classList.add('skjult');if(!t.closest('[data-logg]'))return}
@@ -576,6 +624,12 @@ document.addEventListener('click',e=>{
     klokkeTekst();lagre();return}
   if(t.closest('#angre')){const a=S.aksjoner.pop();if(a){S.aksjoner.forEach(x=>{if(String(x.kobling)===String(a.id))x.kobling=''});const f=S.aksjoner[S.aksjoner.length-1];S.sisteKnapp=f?{fase:f.fase,type:f.type,utfall:f.oppnadd,id:f.id}:null;markerSiste();renderFeed();lagre()}return}
   if(t.closest('#koble')){const n=S.aksjoner.length;if(n>1){const a=S.aksjoner[n-1];a.kobling=a.kobling?'':S.aksjoner[n-2].id;renderFeed();lagre()}return}
+  const visOpp=()=>{$('opp-kamp').innerHTML=$('opp-utf').innerHTML=oppstillingHTML()};
+  if(t.closest('[data-oppny]')){const f=S.oppstilling[S.oppstilling.length-1];S.oppstilling.push({min:minutt()||'',formasjon:f.formasjon,posisjon:f.posisjon});visOpp();lagre();return}
+  const os=t.closest('[data-oppslett]');if(os){S.oppstilling.splice(+os.dataset.oppslett,1);visOpp();lagre();return}
+  if(t.closest('[data-karny]')){S.karakter.push({min:minutt()||'',type:'',tekst:''});$('karakter').innerHTML=karakterHTML();lagre();return}
+  const ks=t.closest('[data-karslett]');if(ks){if(confirm('Fjerne denne observasjonen?')){S.karakter.splice(+ks.dataset.karslett,1);$('karakter').innerHTML=karakterHTML();lagre()}return}
+  const kt=t.closest('[data-ktype]');if(kt){const k=S.karakter[+kt.closest('[data-kar]').dataset.kar];k.type=k.type===kt.dataset.ktype?'':kt.dataset.ktype;$('karakter').innerHTML=karakterHTML();lagre();return}
   const fl=t.closest('[data-filter]');if(fl){S.filter=fl.dataset.filter;renderUtfylling();lagre();return}
   const ap=t.closest('[data-apne]');
   if(ap){const id=+ap.dataset.apne;S.apen=S.apen===id?null:id;renderUtfylling();lagre();
@@ -601,6 +655,9 @@ document.addEventListener('input',e=>{
   const el=e.target;
   if(el.dataset.meta)S.meta[el.dataset.meta]=el.value;
   else if(el.dataset.lagnotat)S.lagnotat[el.dataset.lagnotat]=el.value;
+  else if(el.dataset.gruppesum)S.gruppesum[el.dataset.gruppesum]=el.value;
+  else if(el.dataset.o){S.oppstilling[+el.closest('[data-opp]').dataset.opp][el.dataset.o]=el.value;S.meta.posisjon=S.oppstilling[0].posisjon}
+  else if(el.dataset.k)S.karakter[+el.closest('[data-kar]').dataset.kar][el.dataset.k]=el.value;
   else if(el.dataset.sumsel)S.sum[el.dataset.sumsel]=el.value;
   else if(el.dataset.sumtxt)S.sum[el.dataset.sumtxt]=el.value;
   else if(el.hasAttribute('data-sone-endre')){const a=finnA(el.closest('.rad-akt').dataset.id),k=kontekst(a.fase,el.value);a.oppgave=k.oppgave;a.rom=k.rom;renderUtfylling()}
@@ -618,8 +675,12 @@ document.addEventListener('change',e=>{
 function tekst(){
   const m=S.meta,L=[];
   const pt=(a,pre)=>PTRH.filter(p=>a[pre+p.k]).map(p=>`${p.n}: ${a[pre+p.k]}`).join('; ');
-  L.push(`LIVE SCOUTING: ${m.spiller||'Spiller'} (${m.posisjon||'posisjon'}, ${m.klubb||'klubb'})`);
-  L.push(`${m.kamp||''} ${m.dato||''} | ${m.type||''} | Scout: ${m.scout||''}`,'');
+  L.push(`LIVE SCOUTING: ${m.spiller||'Spiller'} (${S.oppstilling[0].posisjon||m.posisjon||'posisjon'}, ${m.klubb||'klubb'})`);
+  L.push(`${m.kamp||''} ${m.dato||''} | ${m.type||''} | Scout: ${m.scout||''}`);
+  const opp=S.oppstilling.filter(o=>o.formasjon||o.posisjon).map(o=>`${o===S.oppstilling[0]?'Fra start':'Fra '+(o.min?o.min+"'":'ukjent minutt')}: ${[o.formasjon,o.posisjon].filter(Boolean).join(', ')}`);
+  if(opp.length)L.push('Formasjon og posisjon: '+opp.join(' | '));
+  if(m.hypotese)L.push('Hypotese: '+m.hypotese);
+  L.push('');
   grupper().forEach(({key,aksjoner})=>{
     const a0=aksjoner[0],o=OPPGAVER[a0.fase];
     L.push(`${a0.fase==='angrep'?'ANGREP':'FORSVAR'} > ${a0.oppgave===o.rom.id?o.rom.navn+' > ':''}${stedNavn(a0)}`);
@@ -635,11 +696,16 @@ function tekst(){
       if(a.variant||a.hurtig||pt(a,'sf')||a.sikkerhet)L.push(`    Beslutte hvordan: ${[a.variant,a.hurtig,pt(a,'sf'),a.sikkerhet?'Sikkerhet '+a.sikkerhet+' ('+SIKKERHET[a.sikkerhet][0].toLowerCase()+')':''].filter(Boolean).join('. ')}`);
       if(a.utfort||a.kroppsdel||pt(a,'tk'))L.push(`    Utføre beslutning: ${[a.utfort,a.kroppsdel,pt(a,'tk')].filter(Boolean).join('. ')}`);
     });
+    if(S.gruppesum[key])L.push(`  Oppsummering: ${S.gruppesum[key]}`);
     L.push('');
   });
+  const kar=S.karakter.filter(k=>k.tekst||k.type);
+  if(kar.length){L.push('PROFESJONALITET OG KARAKTER');kar.forEach(k=>L.push(`  ${[k.min?k.min+"'":'',k.type,k.tekst].filter(Boolean).join(' ')}`));L.push('')}
   L.push('OPPSUMMERING',`Samlet nivå: ${S.sum.niva||'-'}`,`Sterkest: ${S.sum.sterkest||'-'}`,`Svakest: ${S.sum.svakest||'-'}`);
   if(S.sum.neste)L.push(`Neste rapport: ${S.sum.neste}`);
-  if(S.sum.kondisjon&&['In-depth','Live'].includes(m.type))L.push(`Fotballkondisjon: ${S.sum.kondisjon}`);
+  if(['In-depth','Live'].includes(m.type)){
+    const fk=[['kondisjon1','Gjøre aksjonene så ofte som mulig'],['kondisjon2','Opprettholde frekvensen på aksjonene'],['kondisjon3','Opprettholde kvaliteten på aksjonene så lenge som mulig']].filter(([k])=>S.sum[k]);
+    if(fk.length){L.push('Fotballkondisjon:');fk.forEach(([k,n])=>L.push(`  ${n}: ${S.sum[k]}`))}}
   return L.join('\n');
 }
 $('kopier').onclick=async()=>{const t=tekst();
