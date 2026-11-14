@@ -153,6 +153,13 @@ details.hjelp dl{margin:6px 0 0}
 details.hjelp dt{font-weight:700}
 details.hjelp dd{margin:0 0 4px}
 .tom{font-style:italic}
+.rapporter>summary{cursor:pointer;font-weight:700}
+.raprad{display:flex;gap:8px;align-items:center;border-top:1.5px dashed var(--line);padding:8px 0}
+.raprad:first-child{border-top:0}
+.raprad .rt{flex:1;min-width:0;font-size:14px;line-height:1.3}
+.raprad .rt b{display:block;font-size:15px}
+.raprad .knapp{padding:8px 12px}
+.aktiv-merke{font-size:13px;font-weight:700;color:var(--accent-text)}
 
 /* RAPPORT */
 table.stat{border-collapse:collapse;width:100%;font-size:14px;margin:6px 0 16px}
@@ -181,8 +188,13 @@ table.stat td.n{text-align:center;width:60px}
 <main class="wrap">
   <!-- KAMP -->
   <section class="vis" data-vis="kamp">
+    <details class="blokk rapporter" id="rapporter"><summary id="rapsum">Mine rapporter</summary>
+      <div id="rapliste"></div>
+      <div class="knapper" style="margin-top:8px"><button type="button" class="knapp" data-nyrapport>Ny rapport</button>
+        <label class="knapp sek">Importer rapport<input type="file" id="importfil" accept=".json,application/json" class="skjult"></label></div>
+    </details>
     <h2>Kamp og spiller</h2>
-    <p class="ingress">Fyll ut før kampen. Under kampen logger du i Live med ett trykk per fotballaksjon. «Koble til forrige» knytter den siste aksjonen du logget til aksjonen rett før. I pausen og etter kampen fyller du ut komponentene i Utfylling.</p>
+    <p class="ingress">Fyll ut før kampen. Tidligere rapporter ligger under Mine rapporter. Under kampen logger du i Live med ett trykk per fotballaksjon. «Koble til forrige» knytter den siste aksjonen du logget til aksjonen rett før. I pausen og etter kampen fyller du ut komponentene i Utfylling.</p>
     <div class="grid">
       <label class="f">Spiller<input type="text" data-meta="spiller"></label>
       <label class="f">Klubb<input type="text" data-meta="klubb"></label>
@@ -253,7 +265,9 @@ table.stat td.n{text-align:center;width:60px}
     <div class="knapper">
       <button class="knapp" id="kopier">Kopier notater</button>
       <button class="knapp sek" id="skriv">Skriv ut</button>
-      <button class="knapp sek" id="nytt">Nytt skjema</button>
+      <button class="knapp" id="eksport">Del rapport som fil</button>
+      <button class="knapp sek skjult" id="delfil">Del fila</button>
+      <button class="knapp sek" data-nyrapport>Ny rapport</button>
       <span id="status" aria-live="polite"></span>
     </div>
   </section>
@@ -660,7 +674,7 @@ function render(){
   if(S.fane==='utfylling')renderUtfylling();
   if(S.fane==='rapport')renderRapport();
   renderPanel();
-  if(S.fane==='kamp'){document.querySelectorAll('[data-meta]').forEach(m=>m.value=S.meta[m.dataset.meta]||'');$('opp-kamp').innerHTML=oppstillingHTML()}
+  if(S.fane==='kamp'){document.querySelectorAll('[data-meta]').forEach(m=>m.value=S.meta[m.dataset.meta]||'');$('opp-kamp').innerHTML=oppstillingHTML();renderRapporter()}
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.fane==='live'){hold(true);klokkeTekst()}});
 
@@ -678,27 +692,73 @@ const idbPut=(b,k,v)=>idbKjor(b,'readwrite',o=>o.put(v,k));
 const idbGet=(b,k)=>idbKjor(b,'readonly',o=>o.get(k));
 const idbDel=(b,k)=>idbKjor(b,'readwrite',o=>o.delete(k));
 const idbClear=b=>idbKjor(b,'readwrite',o=>o.clear());
-const idbSett=v=>idbPut(BUTIKK,NOKKEL,v);
-const idbHent=()=>idbGet(BUTIKK,NOKKEL);
+// Hver rapport lagres for seg under RAP+id, både i localStorage og IndexedDB. AKTIV peker på rapporten som er åpen.
+const RAP='livescouting:rapport:',AKTIV='livescouting:aktiv';
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v);return true}catch(e){return false}};
+const lsDel=k=>{try{localStorage.removeItem(k)}catch(e){}};
+const nyest=liste=>{let best=null;liste.forEach(j=>{try{const o=j&&JSON.parse(j);if(o&&o.id&&(!best||(o.oppdatert||0)>(best.oppdatert||0)))best=o}catch(e){}});return best};
 let lt;
 function lagreNa(){
   clearTimeout(lt);lt=null;S.oppdatert=Date.now();
-  const j=JSON.stringify(S);let lokalt=false;
-  try{localStorage.setItem(NOKKEL,j);lokalt=true}catch(e){}
-  idbSett(j).catch(()=>{if(!lokalt)vis('Ikke lagret. Kopier notatene før du lukker.')});
+  const j=JSON.stringify(S),lokalt=lsSet(RAP+S.id,j);
+  lsSet(AKTIV,S.id);
+  idbPut(BUTIKK,RAP+S.id,j).catch(()=>{if(!lokalt)vis('Ikke lagret. Kopier notatene før du lukker.')});
+  idbPut(BUTIKK,AKTIV,S.id).catch(()=>{});
 }
 function lagre(){clearTimeout(lt);lt=setTimeout(lagreNa,400)}
+async function hentRapport(id){
+  let i=null;try{i=await idbGet(BUTIKK,RAP+id)}catch(e){}
+  return nyest([lsGet(RAP+id),i]);
+}
+function oppgrader(o){
+  const s=Object.assign(tomState(),o);
+  // Utkast fra eldre utgaver
+  if(!Array.isArray(s.oppstilling)||!s.oppstilling.length)s.oppstilling=tomState().oppstilling;
+  if(s.meta.posisjon&&!s.oppstilling[0].posisjon)s.oppstilling[0].posisjon=s.meta.posisjon;
+  if(s.sum.kondisjon&&!s.sum.kondisjon1){s.sum.kondisjon1=s.sum.kondisjon;s.sum.kondisjon=''}
+  return s;
+}
 async function hent(){
-  const kilder=[];
-  try{kilder.push(localStorage.getItem(NOKKEL))}catch(e){}
-  try{kilder.push(await idbHent())}catch(e){}
-  let best=null;
-  kilder.forEach(j=>{try{const o=j&&JSON.parse(j);if(o&&(!best||(o.oppdatert||0)>(best.oppdatert||0)))best=o}catch(e){}});
-  if(best){S=Object.assign(tomState(),best);
-    // Utkast fra eldre utgaver
-    if(!Array.isArray(S.oppstilling)||!S.oppstilling.length)S.oppstilling=tomState().oppstilling;
-    if(S.meta.posisjon&&!S.oppstilling[0].posisjon)S.oppstilling[0].posisjon=S.meta.posisjon;
-    if(S.sum.kondisjon&&!S.sum.kondisjon1){S.sum.kondisjon1=S.sum.kondisjon;S.sum.kondisjon=''}}
+  // Utkastet fra v4 og eldre (ett utkast om gangen) flyttes inn som en egen rapport
+  let gammel=null;try{gammel=nyest([lsGet(NOKKEL),await idbGet(BUTIKK,NOKKEL)])}catch(e){gammel=nyest([lsGet(NOKKEL)])}
+  if(gammel){const n=await hentRapport(gammel.id);
+    if(!n||(n.oppdatert||0)<(gammel.oppdatert||0)){S=oppgrader(gammel);lagreNa()}
+    lsDel(NOKKEL);idbDel(BUTIKK,NOKKEL).catch(()=>{})}
+  let id=lsGet(AKTIV);if(!id){try{id=await idbGet(BUTIKK,AKTIV)}catch(e){}}
+  const o=id&&await hentRapport(id);
+  S=o?oppgrader(o):(gammel?oppgrader(gammel):tomState());
+}
+async function alleRapporter(){
+  const id=new Set();
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(RAP))id.add(k.slice(RAP.length))}}catch(e){}
+  try{(await idbKjor(BUTIKK,'readonly',o=>o.getAllKeys())).forEach(k=>{if(String(k).startsWith(RAP))id.add(String(k).slice(RAP.length))})}catch(e){}
+  id.add(S.id);
+  const liste=await Promise.all([...id].map(i=>i===S.id?S:hentRapport(i)));
+  return liste.filter(r=>{if(!r)return false;if(r.id!==S.id&&erTom(r)){lsDel(RAP+r.id);idbDel(BUTIKK,RAP+r.id).catch(()=>{});return false}return true}).sort((a,b)=>(b.oppdatert||0)-(a.oppdatert||0));
+}
+async function renderRapporter(){
+  const liste=await alleRapporter();
+  $('rapsum').textContent=`Mine rapporter (${liste.length})`;
+  $('rapliste').innerHTML=liste.map(r=>{const m=r.meta||{},aktiv=r.id===S.id,n=(r.aksjoner||[]).length;
+    const dato=m.dato?m.dato.split('-').reverse().join('.'):'';
+    return `<div class="raprad"><div class="rt"><b>${esc(m.spiller||'Uten spiller')}</b>${esc([m.kamp,dato].filter(Boolean).join(', '))}${m.kamp||dato?'. ':''}${n} ${n===1?'aksjon':'aksjoner'}</div>
+      ${aktiv?'<span class="aktiv-merke">Åpen nå</span>':`<button type="button" class="knapp sek" data-rapapne="${esc(r.id)}">Åpne</button>`}
+      <button type="button" class="knapp sek" data-rapslett="${esc(r.id)}">Slett</button></div>`}).join('');
+}
+const erTom=r=>!(r.aksjoner||[]).length&&!(r.karakter||[]).length&&!Object.values(r.meta||{}).some(Boolean);
+async function byttRapport(nyS){
+  await stoppOpptak();
+  // En tom rapport forkastes når man går fra den, så lista ikke fylles med tomme rapporter
+  if(erTom(S)){lsDel(RAP+S.id);idbDel(BUTIKK,RAP+S.id).catch(()=>{})}else lagreNa();
+  panel=null;S=nyS;S.fane='kamp';lagreNa();render();window.scrollTo(0,0);
+}
+async function slettRapport(id){
+  lsDel(RAP+id);idbDel(BUTIKK,RAP+id).catch(()=>{});
+  try{(await idbKjor(LYD,'readonly',o=>o.getAllKeys())).forEach(k=>{if(String(k).startsWith(id+':'))idbDel(LYD,k).catch(()=>{})})}catch(e){}
+  if(id===S.id){await stoppOpptak();panel=null;const rest=(await alleRapporter()).filter(r=>r.id!==id);
+    S=rest.length?oppgrader(rest[0]):tomState();S.fane='kamp';lagreNa();render()}
+  else renderRapporter();
 }
 const lagreVedLukking=()=>{if(lt)lagreNa()};
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){stoppOpptak();lagreVedLukking()}});
@@ -735,6 +795,10 @@ document.addEventListener('click',e=>{
       if(neste===1||neste===2){k.startTs=Date.now();k.justering=0}
       k.periode=neste}
     klokkeTekst();lagre();return}
+  if(t.closest('[data-nyrapport]')){byttRapport(tomState()).then(()=>varsle('Ny rapport. Den forrige ligger under Mine rapporter.'));return}
+  const ra=t.closest('[data-rapapne]');if(ra){hentRapport(ra.dataset.rapapne).then(o=>o?byttRapport(oppgrader(o)):varsle('Fant ikke rapporten.'));return}
+  const rs=t.closest('[data-rapslett]');if(rs){const r=rs.closest('.raprad').querySelector('b').textContent;
+    if(confirm(`Slette rapporten om ${r}? Alle aksjoner, notater og talenotater i den slettes fra telefonen.`))slettRapport(rs.dataset.rapslett);return}
   if(t.closest('#angre')){const a=S.aksjoner.pop();if(a){slettAlleLyd(a);if(opptak&&opptak.ref==='a:'+a.id)stoppOpptak();panel=null;renderPanel();S.aksjoner.forEach(x=>{if(String(x.kobling)===String(a.id))x.kobling=''});const f=S.aksjoner[S.aksjoner.length-1];S.sisteKnapp=f?{fase:f.fase,type:f.type,utfall:f.oppnadd,id:f.id}:null;markerSiste();renderFeed();lagre()}return}
   if(t.closest('#koble')){const n=S.aksjoner.length;if(n>1){const a=S.aksjoner[n-1];a.kobling=a.kobling?'':S.aksjoner[n-2].id;renderFeed();lagre();varsle(a.kobling?`A${a.id} er koblet til A${a.kobling}. Det er det samme som «Henger sammen med» i Utfylling.`:`Koblingen mellom A${a.id} og aksjonen før er fjernet.`)}return}
   const visOpp=()=>{$('opp-kamp').innerHTML=$('opp-utf').innerHTML=oppstillingHTML()};
@@ -825,8 +889,51 @@ function tekst(){
 $('kopier').onclick=async()=>{const t=tekst();
   try{await navigator.clipboard.writeText(t);vis('Notatene er kopiert')}
   catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');vis('Notatene er kopiert')}catch(_){vis('Kopiering feilet')}a.remove()}};
+/* ---------- Rapportfil (eksport og import) ---------- */
+// Én JSON-fil per rapport, med talenotatene som base64. Brukes til å sende rapporten etter kampen,
+// som sikkerhetskopi og som format PlayIQ kan lese. Formatet er beskrevet i DATAMODELL.md.
+const FILFORMAT='brann-live-scouting',FILVERSJON=1;
+const tilB64=buf=>{const b=new Uint8Array(buf);let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s)};
+const fraB64=s=>{const r=atob(s),b=new Uint8Array(r.length);for(let i=0;i<r.length;i++)b[i]=r.charCodeAt(i);return b.buffer};
+const lydNokler=r=>[...(r.aksjoner||[]),...(r.karakter||[])].flatMap(o=>(o.lyd||[]).map(l=>l.k));
+function filnavn(){const m=S.meta,n=[m.spiller||'Rapport',m.dato||new Date().toISOString().slice(0,10)].join(' ');
+  return n.replace(/[\\/:*?"<>|]+/g,'').trim()+'.json'}
+async function lagFil(){
+  await stoppOpptak();lagreNa();
+  const lyd={};let mangler=0;
+  for(const k of lydNokler(S)){let d=null;try{d=await idbGet(LYD,k)}catch(e){}
+    if(d)lyd[k]={type:d.type,data:tilB64(d.buf)};else mangler++}
+  const innhold={format:FILFORMAT,versjon:FILVERSJON,eksportert:new Date().toISOString(),rapport:S,lyd};
+  return {fil:new File([JSON.stringify(innhold)],filnavn(),{type:'application/json'}),mangler};
+}
+let klarFil=null;
+async function delFil(fil){
+  if(navigator.canShare&&navigator.canShare({files:[fil]})){await navigator.share({files:[fil],title:fil.name});return}
+  // Uten delingsmeny (f eks på PC): last ned fila
+  const a=document.createElement('a');a.href=URL.createObjectURL(fil);a.download=fil.name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+}
+$('eksport').onclick=async()=>{
+  let r;try{r=await lagFil()}catch(e){varsle('Klarte ikke å lage fila.');return}
+  if(r.mangler)varsle(`${r.mangler} talenotat${r.mangler===1?'':'er'} fantes ikke på telefonen og er ikke med.`);
+  try{await delFil(r.fil);vis('Fila er klar')}
+  catch(e){if(e&&e.name==='AbortError')return;
+    // Telefonen kan kreve et nytt trykk før delingsmenyen åpnes
+    klarFil=r.fil;$('delfil').classList.remove('skjult');vis('Trykk «Del fila»')}
+};
+$('delfil').onclick=async()=>{if(!klarFil)return;try{await delFil(klarFil);$('delfil').classList.add('skjult');klarFil=null}catch(e){if(e&&e.name!=='AbortError')varsle('Klarte ikke å dele fila.')}};
+$('importfil').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  let d;try{d=JSON.parse(await f.text())}catch(_){varsle('Fila kunne ikke leses.');return}
+  if(!d||d.format!==FILFORMAT||!d.rapport||!d.rapport.id){varsle('Fila er ikke en rapport fra Live scouting.');return}
+  if(d.versjon>FILVERSJON){varsle('Fila er laget i en nyere utgave av appen. Oppdater appen først.');return}
+  const r=d.rapport,fins=await hentRapport(r.id);
+  if(fins&&!confirm(`Rapporten om ${(fins.meta&&fins.meta.spiller)||'spilleren'} finnes allerede på denne telefonen. Erstatte den med fila?`))return;
+  try{for(const [k,v] of Object.entries(d.lyd||{}))await idbPut(LYD,k,{buf:fraB64(v.data),type:v.type})}catch(_){varsle('Talenotatene ble ikke lagret.')}
+  await byttRapport(oppgrader(r));
+  varsle(`Rapporten om ${(r.meta&&r.meta.spiller)||'spilleren'} er importert.`);
+};
 $('skriv').onclick=()=>{$('utskrift').textContent=tekst();window.print()};
-$('nytt').onclick=()=>{if(confirm('Tømme skjemaet? Alle aksjoner og notater slettes.')){stoppOpptak();idbClear(LYD).catch(()=>{});panel=null;S=tomState();render();lagre();vis('Nytt skjema')}};
 
 hent().then(render);
 // Be nettleseren om ikke å rydde bort lagrede data, og gjør appen tilgjengelig uten nett
